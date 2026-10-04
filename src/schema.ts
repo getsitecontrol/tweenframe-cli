@@ -1,6 +1,6 @@
 export type Schema = {
   type?: string; enum?: readonly unknown[]; minimum?: number; maximum?: number; exclusiveMinimum?: number;
-  default?: unknown; description?: string;
+  default?: unknown; description?: string; pattern?: string; format?: string;
 };
 
 const noun = (schema: Schema): string => schema.type === "integer" ? "an integer" : "a number";
@@ -17,6 +17,8 @@ export function allowed(schema: Schema): string {
     if (max !== undefined) return `${noun(schema)} of at most ${max}`;
     return noun(schema);
   }
+  if (schema.pattern) return `a string matching ${schema.pattern}`;
+  if (schema.format === "email") return "an email address";
   return "a string";
 }
 

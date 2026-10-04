@@ -37,6 +37,15 @@ function schemaOption(name: string, schema: Schema, defaultText: string): Option
   return { flags: `--${name} ${placeholder(schema)}`, description: parts.join(" ") };
 }
 
+// A flag that fills a JSON body field; a string field is named after the field, e.g. --challenge <challenge_id>.
+function bodyOption(flag: string, field: string, required: boolean, schema: Schema): OptionDoc {
+  const shape = schema.type === "string" && !schema.enum ? `<${field}>` : placeholder(schema);
+  const parts = [required ? "Required." : "", schema.description ?? ""];
+  // A plain string adds nothing to its placeholder; a pattern, format or range does.
+  if (!schema.enum && schema.type !== "boolean" && allowed(schema) !== "a string") parts.push(sentence(allowed(schema)));
+  return { flags: `--${flag} ${shape}`, description: parts.filter(Boolean).join(" "), required };
+}
+
 const inputOption = (text: string): OptionDoc => ({ flags: "--input <json|file|->", description: text, required: true });
 const outputFile = (implies: boolean): OptionDoc => ({
   flags: "--output <file>",
@@ -53,7 +62,8 @@ function operationDoc(op: Operation): CommandDoc {
       description: texts[name] || parameter?.description || "",
     };
   });
-  const options: OptionDoc[] = [];
+  const options: OptionDoc[] = (op.options as readonly { flag: string; field: string; required: boolean; schema: Schema }[])
+    .map(({ flag, field, required, schema }) => bodyOption(flag, field, required, schema));
   if (op.operationId === "getRecipe") {
     const version = op.parameters.find((item) => item.name === "version");
     const schema = (version?.schema ?? { type: "integer", minimum: 1 }) as Schema;
@@ -109,8 +119,9 @@ const localDocs: CommandDoc[] = [
     path: "auth status",
     summary: "Show whether a usable identity is configured",
     description: "Reads the stored identity (or TWEENFRAME_TOKEN) without calling the API and reports whether it can be "
-      + "used: authenticated, expired, id, expires_at, source (file or environment) and auth_file. An expired token "
-      + "makes every API command fail with auth_required; run `tweenframe auth init` to get a new one.",
+      + "used: authenticated, expired, kind (anonymous or account), email, id, expires_at, source (file or environment) "
+      + "and auth_file. An account key from `auth email verify` has no expiry. An expired anonymous token makes every "
+      + "API command fail with auth_required; run `tweenframe auth init` to get a new one.",
     arguments: [],
     options: [],
     examples: ["tweenframe auth status"],
@@ -148,6 +159,13 @@ export function groupDocsList(): GroupDoc[] {
     const commands = commandDocs.filter((doc) => doc.path.startsWith(`${group.name} `));
     return { name: group.name, description: group.description, docs: groupDocs(group.name), commands };
   });
+}
+
+// Commands nested under a group, such as `auth email`, share the group's description and guide.
+export function subgroupDoc(path: string): GroupDoc {
+  const group = groupDocsList().find((item) => item.name === path.split(" ")[0])!;
+  const commands = commandDocs.filter((doc) => doc.path.startsWith(`${path} `));
+  return { ...group, name: path, commands };
 }
 
 export function wrap(text: string, indent: number, first = indent): string {
@@ -232,7 +250,7 @@ export function programHelp(version: string): string {
     "Environment:\n" + table([
       ["TWEENFRAME_API_URL", `API base URL; now ${apiUrl}`],
       ["TWEENFRAME_TOKEN", "Bearer token; overrides the stored identity"],
-      ["TWEENFRAME_AUTH_FILE", "Where `auth init` stores the identity"],
+      ["TWEENFRAME_AUTH_FILE", "Where `auth init` and `auth email verify` store the identity"],
     ]),
     `Docs: ${docs.skill}\nErrors: ${docs.errors}`,
   ].join("\n\n") + "\n";

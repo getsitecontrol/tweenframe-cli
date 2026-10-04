@@ -9,7 +9,6 @@ the OpenAPI snapshot in `openapi/tweenframe.json`.
 - `src/` — runtime (hand-written): `cli.ts` commands, `api.ts` HTTP/auth, `inputs.ts` JSON and `file://`
   handling, `renders.ts` render/poll/download, `errors.ts` error envelope with `hint`/`docs`, `help.ts` help text
   rendered from the contract, `guides.ts` the `docs` command, `config.ts` API and guide URLs.
-- `tests/snapshots/` — expected help texts; `UPDATE_SNAPSHOTS=1 npm test` rewrites them after an intended change.
 - `src/generated/` — generated from the OpenAPI snapshot by `scripts/generate.mjs`; committed, never edited
   by hand. `npm run typecheck` fails if it is stale.
 - `openapi/tweenframe.json` — contract snapshot, refreshed with `npm run sync:openapi` from a running

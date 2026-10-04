@@ -11,7 +11,8 @@ export { apiUrl };
 
 export type Operation = (typeof operations)[number];
 export type { Schema } from "./schema.js";
-export type SavedIdentity = { id?: string; token?: string; expires_at?: string };
+// One shape for the anonymous identity and the account key; no expires_at means no expiry.
+export type SavedIdentity = { id?: string; token?: string; expires_at?: string; kind?: string; email?: string };
 
 export const authFile = process.env.TWEENFRAME_AUTH_FILE ?? join(homedir(), ".config", "tweenframe-cli", "auth.json");
 const byId = new Map<string, Operation>(operations.map((item) => [item.operationId, item]));
@@ -59,6 +60,7 @@ export function typed(raw: string, schema: Schema, label: string): string | numb
     value = raw === "true";
   }
   if (schema.enum && !schema.enum.includes(value)) fail();
+  if (schema.pattern && !new RegExp(schema.pattern, "u").test(raw)) fail();
   return value;
 }
 

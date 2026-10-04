@@ -25,7 +25,18 @@ tweenframe docs recipes                               # read a guide in the term
 
 `--input` accepts inline JSON, a JSON file, or `-` for stdin. Inputs, `file://` paths and output options are checked before any request. Results go to stdout as `{"data": ...}` (except the text forms of `recipes show`, `docs` and help); errors go to stderr as `{"error": {"code", "message", "details"?, "hint", "docs"}}` with exit code 1. API errors are passed through unchanged, except that an origin-relative `docs` link is made absolute. A failed render exits 1 with the render error and its `uid`; a failed download keeps `uid`, `status` and `result_url` in `details`. `renders wait --input <render json>` resumes polling a pending render.
 
-`auth init` stores the anonymous token (valid one year) in `~/.config/tweenframe-cli/auth.json` with mode `0600`. An expired token fails with `auth_required` before any request; `auth status` shows it. `TWEENFRAME_TOKEN` supplies a token directly; `TWEENFRAME_AUTH_FILE` changes the storage path. `TWEENFRAME_API_URL` sets the API base, default `https://tweenframe.com/api/public/v1`.
+`auth init` stores the anonymous token (valid one year) in `~/.config/tweenframe-cli/auth.json` with mode `0600`. An expired token fails with `auth_required` before any request; `auth status` shows it, together with the identity's `kind` (`anonymous` or `account`) and `email`. `TWEENFRAME_TOKEN` supplies a token directly; `TWEENFRAME_AUTH_FILE` changes the storage path. `TWEENFRAME_API_URL` sets the API base, default `https://tweenframe.com/api/public/v1`.
+
+## Account
+
+An agent starts anonymous: `auth init` is enough for browsing and rendering. When a request needs an account, for example a render wider than the anonymous limit, the API answers `403 registration_required` with a hint. The agent then asks the user for their email and verifies it with a code; the account is free and is created on first use.
+
+```sh
+tweenframe auth email start --email person@example.com     # prints challenge_id; the user gets a 6-digit code
+tweenframe auth email verify --challenge <challenge_id> --code 042917
+```
+
+`auth email verify` replaces the anonymous token in the auth file with the account key, which does not expire, and prints `kind`, `email`, `account_id`, `workspace_id` and `auth_file`, never the key. Images uploaded with the anonymous token move to the account and keep their URLs, so the request that asked for registration can be repeated as is. Running `auth init` again replaces the account key with a new anonymous token; verifying the same email again returns a key for the same account.
 
 The agent guide is served at `/docs/agent/SKILL.md`, the contract at `/api/public/v1/openapi.json`.
 
@@ -36,6 +47,7 @@ Help is the documentation an agent reads first, so it is complete rather than a 
 - **Top level** names the tool in two lines, lists every group and command with its arguments and purpose, the output and error shapes, the environment variables and the guide links.
 - **A group** (`tweenframe recipes`) lists its commands with one-line purposes and links the group's guide.
 - **A command** gives what it does (the operation `description`, plus what the CLI adds, such as uploading `file://` values), every argument and option with its type, allowed values, range and default taken from the schema (`--width <16..4000>`, `--quality <maximum|normal|minimal>`, `--fps <0..30>` "0 keeps the recipe's authored frame rate"), examples from `x-cli.examples`, and a `Docs:` line from `x-cli.docs` or the group tag's `externalDocs`.
+- Operations that take a JSON body map flags to body fields in `x-cli.options` (`--challenge` to `challenge_id`); each flag's type, required marker and text come from the body schema, and a command may have several words (`auth email verify`).
 - `help --json [group [action]]` prints the generated operation metadata, schemas and output options plus a `docs` object (`guide`, `skill`, `errors`, `index`).
 
 Wording comes from the API, not from this repository: improving a description in the OpenAPI document and regenerating improves the help. Only commands the CLI implements itself (`auth status`, `docs`, `help`) and the flags its runtime adds (`--input`, `--wait`, `--output`, `--aspect`, and `--json`, `--example` of `recipes show`) carry hand-written help. Help snapshots in `tests/snapshots/` make every change visible; `UPDATE_SNAPSHOTS=1 npm test` rewrites them.

@@ -1,4 +1,4 @@
-// Generated from openapi/tweenframe.json (sha256 298601d4be38). Do not edit.
+// Generated from openapi/tweenframe.json (sha256 2c9c9e89e145). Do not edit.
 export const meta = {
   "title": "TweenFrame Public API",
   "description": "Render TweenFrame catalog recipes (animated GIF, WebP, video) from the command line. Results print as one JSON document on stdout, errors as one on stderr with a hint and a docs link.",
@@ -9,7 +9,7 @@ export const meta = {
   "groups": [
     {
       "name": "auth",
-      "description": "Anonymous bearer identity: create a token once and reuse it for a year.",
+      "description": "Bearer identity: an anonymous token first; verify an email for an account key when the API asks for it.",
       "docs": "/docs/agent/SKILL.md"
     },
     {
@@ -46,11 +46,93 @@ export const operations = [
     "path": "/identity",
     "authenticated": false,
     "positionals": [],
+    "options": [],
     "parameters": [],
     "contentType": null,
     "bodySchema": null,
     "responseSchema": {
       "$ref": "#/components/schemas/AnonymousIdentity"
+    }
+  },
+  {
+    "operationId": "startEmailVerification",
+    "command": "auth email start",
+    "mode": "request",
+    "summary": "Send a sign-in code to an email",
+    "description": "Sends a 6-digit code to the user's email and returns the `challenge_id` to verify it with. Use it when the API answers 403 registration_required: ask the user for their email, start here, then pass the code the user received to `auth email verify`. Needs the anonymous token. The answer is the same for a new and an existing email. Sending is rate limited per identity (429 rate_limited with Retry-After).",
+    "examples": [
+      "tweenframe auth email start --email person@example.com"
+    ],
+    "docs": "/docs/agent/SKILL.md",
+    "arguments": {},
+    "method": "POST",
+    "path": "/auth/email/start",
+    "authenticated": true,
+    "positionals": [],
+    "options": [
+      {
+        "flag": "email",
+        "field": "email",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address; the code is sent there."
+        }
+      }
+    ],
+    "parameters": [],
+    "contentType": "application/json",
+    "bodySchema": {
+      "$ref": "#/components/schemas/EmailStartRequest"
+    },
+    "responseSchema": {
+      "$ref": "#/components/schemas/EmailChallenge"
+    }
+  },
+  {
+    "operationId": "verifyEmailCode",
+    "command": "auth email verify",
+    "mode": "store-identity",
+    "summary": "Verify the emailed code and get an account key",
+    "description": "Checks the code from the email and returns an account API key; the account is created on first use and is free. Images uploaded with the anonymous token move to the account and keep their URLs. Use the key as the bearer from now on and repeat the request that asked for registration. The key does not expire; the CLI stores it in its auth file and prints no secret. A wrong, expired or used code is 400 email_code_invalid; after too many wrong tries the code stops working, so start over.",
+    "examples": [
+      "tweenframe auth email verify --challenge 7Rk2fQ9xLm --code 042917"
+    ],
+    "docs": "/docs/agent/SKILL.md",
+    "arguments": {},
+    "method": "POST",
+    "path": "/auth/email/verify",
+    "authenticated": true,
+    "positionals": [],
+    "options": [
+      {
+        "flag": "challenge",
+        "field": "challenge_id",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "description": "challenge_id from POST /auth/email/start."
+        }
+      },
+      {
+        "flag": "code",
+        "field": "code",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9]{6}$",
+          "description": "The 6-digit code from the email, as a string: leading zeros count."
+        }
+      }
+    ],
+    "parameters": [],
+    "contentType": "application/json",
+    "bodySchema": {
+      "$ref": "#/components/schemas/EmailVerifyRequest"
+    },
+    "responseSchema": {
+      "$ref": "#/components/schemas/AccountKey"
     }
   },
   {
@@ -68,6 +150,7 @@ export const operations = [
     "path": "/recipes",
     "authenticated": false,
     "positionals": [],
+    "options": [],
     "parameters": [],
     "contentType": null,
     "bodySchema": null,
@@ -96,6 +179,7 @@ export const operations = [
     "positionals": [
       "id"
     ],
+    "options": [],
     "parameters": [
       {
         "name": "id",
@@ -142,6 +226,7 @@ export const operations = [
     "positionals": [
       "file"
     ],
+    "options": [],
     "parameters": [],
     "contentType": "multipart/form-data",
     "bodySchema": {
@@ -181,6 +266,7 @@ export const operations = [
     "positionals": [
       "source"
     ],
+    "options": [],
     "parameters": [],
     "contentType": "application/json",
     "bodySchema": {
@@ -211,6 +297,7 @@ export const operations = [
     "positionals": [
       "recipe"
     ],
+    "options": [],
     "parameters": [],
     "contentType": "application/json",
     "bodySchema": {
@@ -235,6 +322,7 @@ export const operations = [
     "path": "/renders/{jobKey}",
     "authenticated": true,
     "positionals": [],
+    "options": [],
     "parameters": [
       {
         "name": "jobKey",
@@ -392,6 +480,92 @@ export const schemas = {
       "id",
       "token",
       "expires_at"
+    ]
+  },
+  "EmailStartRequest": {
+    "type": "object",
+    "properties": {
+      "email": {
+        "type": "string",
+        "format": "email",
+        "description": "The user's email address; the code is sent there."
+      }
+    },
+    "required": [
+      "email"
+    ],
+    "additionalProperties": false
+  },
+  "EmailChallenge": {
+    "type": "object",
+    "properties": {
+      "challenge_id": {
+        "type": "string",
+        "description": "Pass it to POST /auth/email/verify together with the code."
+      },
+      "expires_at": {
+        "type": "string",
+        "format": "date-time",
+        "description": "When the code stops working."
+      }
+    },
+    "required": [
+      "challenge_id",
+      "expires_at"
+    ]
+  },
+  "EmailVerifyRequest": {
+    "type": "object",
+    "properties": {
+      "challenge_id": {
+        "type": "string",
+        "description": "challenge_id from POST /auth/email/start."
+      },
+      "code": {
+        "type": "string",
+        "pattern": "^[0-9]{6}$",
+        "description": "The 6-digit code from the email, as a string: leading zeros count."
+      }
+    },
+    "required": [
+      "challenge_id",
+      "code"
+    ],
+    "additionalProperties": false
+  },
+  "AccountKey": {
+    "type": "object",
+    "properties": {
+      "token": {
+        "type": "string",
+        "description": "Account API key; send it as the bearer instead of the anonymous token. It does not expire. Keep it secret."
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "account"
+        ],
+        "description": "Always `account`."
+      },
+      "email": {
+        "type": "string",
+        "description": "The verified email."
+      },
+      "account_id": {
+        "type": "string",
+        "description": "Account the key belongs to."
+      },
+      "workspace_id": {
+        "type": "string",
+        "description": "Workspace that now holds the images uploaded with the anonymous token."
+      }
+    },
+    "required": [
+      "token",
+      "kind",
+      "email",
+      "account_id",
+      "workspace_id"
     ]
   },
   "Asset": {

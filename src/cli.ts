@@ -4,9 +4,9 @@ import { chmod, mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { Command, CommanderError } from "commander";
 import { operations, outputOptions, schemas } from "./generated/contract.js";
-import { apiUrl, authFile, isExpired, localFile, request, savedIdentity, type Operation } from "./api.js";
+import { apiUrl, authFile, isExpired, localFile, request, savedIdentity, typed, type Operation, type SavedIdentity, type Schema } from "./api.js";
 import { docs, groupDocs } from "./config.js";
-import { commandDocs, commandHelp, groupDocsList, groupHelp, programHelp, type CommandDoc } from "./help.js";
+import { commandDocs, commandHelp, groupDocsList, groupHelp, programHelp, subgroupDoc, type CommandDoc } from "./help.js";
 import { guideList, guideText, guides } from "./guides.js";
 import { analyzeSource, type AnalyzeOptions } from "./analyze.js";
 import { CliError, type Json } from "./errors.js";
@@ -18,14 +18,31 @@ import { exampleImageHint, exampleInputs, recipeSummary, type ShowOptions } from
 const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
 const emit = (data: unknown): void => { process.stdout.write(JSON.stringify({ data }) + "\n"); };
 
+// The JSON body an operation's mapped flags describe; undefined when it takes none.
+function bodyOf(op: Operation, options: Json): Json | undefined {
+  if (!op.options.length) return undefined;
+  const body: Json = {};
+  for (const { flag, field, schema } of op.options as readonly { flag: string; field: string; schema: Schema }[]) {
+    if (options[flag] !== undefined) body[field] = typed(String(options[flag]), schema, `--${flag}`);
+  }
+  return body;
+}
+
+const identityFields = ["id", "token", "expires_at", "kind", "email"] as const;
+
 async function execute(op: Operation, args: string[], options: Json): Promise<unknown> {
   switch (op.mode) {
     case "store-identity": {
-      const identity = await request("createAnonymousIdentity");
+      const { token, ...shown } = await request(op.operationId, {}, bodyOf(op, options)) as Json;
+      if (typeof token !== "string" || !token)
+        throw new CliError("invalid_response", "The API answered without a token; nothing was saved.", { operation: op.operationId });
+      const identity: SavedIdentity = Object.fromEntries(identityFields
+        .map((key) => [key, key === "token" ? token : shown[key]]).filter(([, value]) => value !== undefined));
       await mkdir(dirname(authFile), { recursive: true, mode: 0o700 });
       await writeFile(authFile, JSON.stringify(identity) + "\n", { mode: 0o600 });
       await chmod(authFile, 0o600);
-      return { id: identity.id, expires_at: identity.expires_at, auth_file: authFile };
+      // The secret stays in the file; everything else the API returned is printed.
+      return { ...shown, auth_file: authFile };
     }
     case "request": {
       const values: Json = Object.fromEntries(op.positionals.map((name, index) => [name, args[index]]));
@@ -38,7 +55,7 @@ async function execute(op: Operation, args: string[], options: Json): Promise<un
           throw new CliError("usage", "Use either --json or --example, not both.");
         Object.assign(values, { id: reference.id, version: args[1] ?? reference.version });
       }
-      return request(op.operationId, values);
+      return request(op.operationId, values, bodyOf(op, options));
     }
     case "upload":
       await localFile(args[0]);
@@ -91,9 +108,25 @@ for (const group of groupDocsList()) {
   command.helpInformation = () => groupHelp(group);
   groups.set(group.name, command);
 }
+// `auth email start` nests `start` under an `email` subgroup of `auth`, with its own help.
+function parentOf(words: string[]): Command {
+  let parent = groups.get(words[0])!;
+  for (let depth = 2; depth <= words.length; depth++) {
+    const name = words[depth - 1];
+    const found = parent.commands.find((item) => item.name() === name);
+    if (found) parent = found;
+    else {
+      const subgroup = subgroupDoc(words.slice(0, depth).join(" "));
+      parent = parent.command(name).description(subgroup.description);
+      parent.helpInformation = () => groupHelp(subgroup);
+    }
+  }
+  return parent;
+}
+
 for (const op of operations) {
-  const [groupName, actionName] = op.command.split(" ");
-  register(groups.get(groupName)!, actionName, docOf(op.command)).action(async (...received: unknown[]) => {
+  const words = op.command.split(" ");
+  register(parentOf(words.slice(0, -1)), words.at(-1)!, docOf(op.command)).action(async (...received: unknown[]) => {
     const cliCommand = received.at(-1) as Command;
     const options = cliCommand.opts() as Json;
     const result = await execute(op, cliCommand.args, options);
@@ -112,7 +145,10 @@ register(groups.get("auth")!, "status", docOf("auth status")).action(async () =>
   const saved = await savedIdentity();
   if (!saved?.token) return emit({ authenticated: false, auth_file: authFile });
   const expired = isExpired(saved);
-  emit({ authenticated: !expired, expired, id: saved.id, expires_at: saved.expires_at, source: "file", auth_file: authFile });
+  emit({
+    authenticated: !expired, expired, kind: saved.kind ?? "anonymous", email: saved.email, id: saved.id,
+    expires_at: saved.expires_at, source: "file", auth_file: authFile,
+  });
 });
 register(program, "docs", docOf("docs")).action(async (name: string | undefined, options: { json?: boolean }) => {
   if (name !== undefined) {
@@ -150,10 +186,14 @@ register(program, "help", docOf("help")).action((path: string[], options: { json
 
 // The command a failed parse was meant for, so a usage hint can point at its help.
 function attemptedCommand(): string {
-  const words = process.argv.slice(2).filter((word) => !word.startsWith("-"));
-  const group = program.commands.find((item) => item.name() === words[0]);
-  const action = group?.commands.find((item) => item.name() === words[1]);
-  return ["tweenframe", group?.name(), action?.name()].filter(Boolean).join(" ");
+  const names = ["tweenframe"];
+  let target: Command | undefined = program;
+  for (const word of process.argv.slice(2).filter((item) => !item.startsWith("-"))) {
+    target = target.commands.find((item) => item.name() === word);
+    if (!target) break;
+    names.push(word);
+  }
+  return names.join(" ");
 }
 
 try {

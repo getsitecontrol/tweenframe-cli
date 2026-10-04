@@ -3,7 +3,7 @@
   "info": {
     "title": "TweenFrame Public API",
     "version": "0.2.0",
-    "description": "Render curated catalog recipes into animated GIF, WebP, APNG, MP4, WebM or still images.\n\nFlow: create an anonymous identity (POST /identity), pick a recipe (GET /recipes), read its input_schema and examples (GET /recipes/{id}), upload local images as assets (POST /assets), post a render (POST /renders) and poll it until it completes (GET /renders/{jobKey}).\n\nEvery error is `{error: {code, message, details?, hint, docs}}`: `hint` says what to do next and `docs` links the code's section in the errors guide.\n\nGuides (origin-relative, plain Markdown): skill /docs/agent/SKILL.md, recipes /docs/agent/recipes.md, output /docs/agent/output.md, assets /docs/agent/assets.md, errors /docs/agent/errors.md, HTTP API /docs/agent/api.md; index /docs/agent/index.json.",
+    "description": "Render curated catalog recipes into animated GIF, WebP, APNG, MP4, WebM or still images.\n\nFlow: create an anonymous identity (POST /identity), pick a recipe (GET /recipes), read its input_schema and examples (GET /recipes/{id}), upload local images as assets (POST /assets), post a render (POST /renders) and poll it until it completes (GET /renders/{jobKey}).\n\nAnonymous renders are up to 1000 px wide; a wider one answers 403 registration_required. Verify the user's email (POST /auth/email/start, then POST /auth/email/verify), which is free, and repeat the same request with the account key it returns.\n\nEvery error is `{error: {code, message, details?, hint, docs}}`: `hint` says what to do next and `docs` links the code's section in the errors guide.\n\nGuides (origin-relative, plain Markdown): skill /docs/agent/SKILL.md, recipes /docs/agent/recipes.md, output /docs/agent/output.md, assets /docs/agent/assets.md, errors /docs/agent/errors.md, HTTP API /docs/agent/api.md; index /docs/agent/index.json.",
     "x-cli": {
       "description": "Render TweenFrame catalog recipes (animated GIF, WebP, video) from the command line. Results print as one JSON document on stdout, errors as one on stderr with a hint and a docs link.",
       "docs": "/docs/agent/SKILL.md",
@@ -18,7 +18,7 @@
   "tags": [
     {
       "name": "auth",
-      "description": "Anonymous bearer identity: create a token once and reuse it for a year.",
+      "description": "Bearer identity: an anonymous token first; verify an email for an account key when the API asks for it.",
       "externalDocs": {
         "url": "/docs/agent/SKILL.md"
       }
@@ -50,12 +50,12 @@
       "bearerToken": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Token from POST /identity, valid for one year. Send it as `Authorization: Bearer <token>`."
+        "description": "Anonymous token from POST /identity (valid for one year) or account key from POST /auth/email/verify (no expiry). Send it as `Authorization: Bearer <token>`."
       }
     },
     "responses": {
       "400": {
-        "description": "Malformed request (invalid_json, bad_request)",
+        "description": "Malformed request (invalid_json, bad_request) or a wrong email code (email_code_invalid)",
         "content": {
           "application/json": {
             "schema": {
@@ -75,7 +75,7 @@
         }
       },
       "403": {
-        "description": "The token may not use this resource (asset_forbidden, invalid_poll_token)",
+        "description": "The token may not use this resource (asset_forbidden, invalid_poll_token, registration_required)",
         "content": {
           "application/json": {
             "schema": {
@@ -105,7 +105,7 @@
         }
       },
       "413": {
-        "description": "Upload larger than 25 MB, render request larger than 256 KB or analyze request larger than 16 KB (payload_too_large)",
+        "description": "Upload larger than 25 MB, render request larger than 256 KB, analyze request larger than 16 KB or sign-in request larger than 4 KB (payload_too_large)",
         "content": {
           "application/json": {
             "schema": {
@@ -135,7 +135,7 @@
         }
       },
       "429": {
-        "description": "Quota for this period spent (quota_exceeded)",
+        "description": "Quota for this period spent (quota_exceeded) or too many requests (rate_limited); may carry Retry-After",
         "content": {
           "application/json": {
             "schema": {
@@ -156,6 +156,16 @@
       },
       "502": {
         "description": "Render service unreachable or failing (upstream_unavailable, upstream_error)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "503": {
+        "description": "Email cannot be sent (email_delivery_unavailable)",
         "content": {
           "application/json": {
             "schema": {
@@ -255,6 +265,92 @@
           "id",
           "token",
           "expires_at"
+        ]
+      },
+      "EmailStartRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "The user's email address; the code is sent there."
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "additionalProperties": false
+      },
+      "EmailChallenge": {
+        "type": "object",
+        "properties": {
+          "challenge_id": {
+            "type": "string",
+            "description": "Pass it to POST /auth/email/verify together with the code."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the code stops working."
+          }
+        },
+        "required": [
+          "challenge_id",
+          "expires_at"
+        ]
+      },
+      "EmailVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "challenge_id": {
+            "type": "string",
+            "description": "challenge_id from POST /auth/email/start."
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$",
+            "description": "The 6-digit code from the email, as a string: leading zeros count."
+          }
+        },
+        "required": [
+          "challenge_id",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "AccountKey": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Account API key; send it as the bearer instead of the anonymous token. It does not expire. Keep it secret."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "account"
+            ],
+            "description": "Always `account`."
+          },
+          "email": {
+            "type": "string",
+            "description": "The verified email."
+          },
+          "account_id": {
+            "type": "string",
+            "description": "Account the key belongs to."
+          },
+          "workspace_id": {
+            "type": "string",
+            "description": "Workspace that now holds the images uploaded with the anonymous token."
+          }
+        },
+        "required": [
+          "token",
+          "kind",
+          "email",
+          "account_id",
+          "workspace_id"
         ]
       },
       "Asset": {
@@ -1110,6 +1206,159 @@
         }
       }
     },
+    "/auth/email/start": {
+      "post": {
+        "operationId": "startEmailVerification",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Send a sign-in code to an email",
+        "description": "Sends a 6-digit code to the user's email and returns the `challenge_id` to verify it with. Use it when the API answers 403 registration_required: ask the user for their email, start here, then pass the code the user received to `auth email verify`. Needs the anonymous token. The answer is the same for a new and an existing email. Sending is rate limited per identity (429 rate_limited with Retry-After).",
+        "x-cli": {
+          "command": "auth email start",
+          "mode": "request",
+          "options": {
+            "email": "email"
+          },
+          "examples": [
+            "tweenframe auth email start --email person@example.com"
+          ],
+          "docs": "/docs/agent/SKILL.md"
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "The email to send the code to.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailStartRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Code sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailChallenge"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "413": {
+            "$ref": "#/components/responses/413"
+          },
+          "415": {
+            "$ref": "#/components/responses/415"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "429": {
+            "$ref": "#/components/responses/429"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "502": {
+            "$ref": "#/components/responses/502"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          },
+          "504": {
+            "$ref": "#/components/responses/504"
+          }
+        }
+      }
+    },
+    "/auth/email/verify": {
+      "post": {
+        "operationId": "verifyEmailCode",
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify the emailed code and get an account key",
+        "description": "Checks the code from the email and returns an account API key; the account is created on first use and is free. Images uploaded with the anonymous token move to the account and keep their URLs. Use the key as the bearer from now on and repeat the request that asked for registration. The key does not expire; the CLI stores it in its auth file and prints no secret. A wrong, expired or used code is 400 email_code_invalid; after too many wrong tries the code stops working, so start over.",
+        "x-cli": {
+          "command": "auth email verify",
+          "mode": "store-identity",
+          "options": {
+            "challenge": "challenge_id",
+            "code": "code"
+          },
+          "examples": [
+            "tweenframe auth email verify --challenge 7Rk2fQ9xLm --code 042917"
+          ],
+          "docs": "/docs/agent/SKILL.md"
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "The challenge from POST /auth/email/start and the code the user received.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountKey"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "401": {
+            "$ref": "#/components/responses/401"
+          },
+          "413": {
+            "$ref": "#/components/responses/413"
+          },
+          "415": {
+            "$ref": "#/components/responses/415"
+          },
+          "422": {
+            "$ref": "#/components/responses/422"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "502": {
+            "$ref": "#/components/responses/502"
+          },
+          "504": {
+            "$ref": "#/components/responses/504"
+          }
+        }
+      }
+    },
     "/recipes": {
       "get": {
         "operationId": "listRecipes",
@@ -1429,7 +1678,32 @@
             "$ref": "#/components/responses/401"
           },
           "403": {
-            "$ref": "#/components/responses/403"
+            "description": "The token may not use an asset (asset_forbidden), or an anonymous token asks for output wider than 1000 px (registration_required)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "registration_required": {
+                    "summary": "Wider output needs a verified email",
+                    "value": {
+                      "error": {
+                        "code": "registration_required",
+                        "message": "Rendering 1600 px wide needs an account. Verify your email and repeat the request.",
+                        "details": {
+                          "limit": 1000,
+                          "actual": 1600,
+                          "render_started": false
+                        },
+                        "hint": "Ask the user for their email, run `auth email start`, then `auth email verify` with the received code, and repeat the same request; lower the width only if the user agrees.",
+                        "docs": "/docs/agent/errors.md#registration_required"
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
           "404": {
             "$ref": "#/components/responses/404"

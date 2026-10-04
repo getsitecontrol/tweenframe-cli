@@ -55,8 +55,10 @@ for (const [path, pathItem] of Object.entries(spec.paths ?? {})) {
     }
     const cli = operation["x-cli"];
     if (!modes.has(cli.mode)) throw new Error(`Unknown x-cli.mode ${cli.mode} on ${operation.operationId}`);
+    // A group and an action of one or more words; extra words become nested subcommands.
     const names = cli.command.split(" ");
-    if (names.length !== 2) throw new Error(`CLI commands must be group and action: ${cli.command}`);
+    if (names.length < 2 || names.some((name) => !/^[a-z][a-z-]*$/.test(name)))
+      throw new Error(`CLI commands must be a group and an action: ${cli.command}`);
     const responses = Object.entries(operation.responses ?? {}).filter(([status]) => /^2\d\d$/.test(status));
     if (responses.length !== 1) throw new Error(`Expected one success response for ${operation.operationId}`);
     const responseSchema = responses[0][1].content?.["application/json"]?.schema;
@@ -83,6 +85,23 @@ for (const [path, pathItem] of Object.entries(spec.paths ?? {})) {
       if (!argumentTexts[name] && !parameter?.description)
         throw new Error(`Positional ${name} on ${operation.operationId} needs x-cli.arguments or a parameter description`);
     }
+    // x-cli.options maps a flag to a JSON body field; its type, text and required-ness come from the body schema.
+    const optionMap = cli.options ?? {};
+    const resolvedBody = bodySchema?.$ref ? schemas[refName(bodySchema.$ref)] : bodySchema;
+    const options = Object.entries(optionMap).map(([flag, field]) => {
+      const schema = resolvedBody?.properties?.[field];
+      if (contentType !== "application/json" || !schema)
+        throw new Error(`x-cli.options --${flag} names unknown JSON body field ${field} on ${operation.operationId}`);
+      if (!schema.description) throw new Error(`Body field ${field} on ${operation.operationId} needs a description; it becomes --${flag} help.`);
+      if (!/^[a-z][a-z-]*$/.test(flag) || positionals.includes(flag))
+        throw new Error(`x-cli.options has an invalid or clashing flag ${flag} on ${operation.operationId}`);
+      return { flag, field, required: Boolean(resolvedBody.required?.includes(field)), schema };
+    });
+    if (options.length) {
+      const mapped = new Set(Object.values(optionMap));
+      for (const field of resolvedBody.required ?? [])
+        if (!mapped.has(field)) throw new Error(`Required body field ${field} on ${operation.operationId} has no x-cli.options flag`);
+    }
     operations.push({
       operationId: operation.operationId,
       command: cli.command,
@@ -96,6 +115,7 @@ for (const [path, pathItem] of Object.entries(spec.paths ?? {})) {
       path,
       authenticated: Boolean(operation.security?.length),
       positionals,
+      options,
       parameters: parameters.map(({ name, in: location, required, schema, description }) => ({
         name, in: location, required: Boolean(required), schema, description: description ?? "",
       })),
