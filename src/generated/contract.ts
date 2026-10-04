@@ -1,4 +1,4 @@
-// Generated from openapi/tweenframe.json (sha256 e50ddda76839). Do not edit.
+// Generated from openapi/tweenframe.json (sha256 4be2ff905bc0). Do not edit.
 export const meta = {
   "title": "TweenFrame Public API",
   "description": "Render TweenFrame catalog recipes (animated GIF, WebP, video) from the command line. Results print as one JSON document on stdout, errors as one on stderr with a hint and a docs link.",
