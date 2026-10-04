@@ -29,4 +29,4 @@ TweenFrame API: set `TWEENFRAME_API_URL` and, for isolated runs, `TWEENFRAME_AUT
 - Comments explain a non-obvious why, never what; no references to specs or tickets in code.
 - The CLI knows nothing about individual recipes: recipe contracts come from the API; the catalog lives in
   the TweenFrame site repository.
-- Do not commit or publish unless asked. `"private": true` stays until publishing is decided.
+- Do not commit, tag or publish unless asked. Releases go through `.github/workflows/release.yml` on a `v*` tag.

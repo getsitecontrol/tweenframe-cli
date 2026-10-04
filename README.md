@@ -2,7 +2,13 @@
 
 Agent-facing command-line client for the TweenFrame public recipe API. An agent discovers a recipe, reads its input schema and examples, uploads local images, renders, and downloads the result without knowing anything about the recipe internals.
 
-Commands, parameters, types and machine-readable help are generated from the OpenAPI snapshot in [openapi/tweenframe.json](openapi/tweenframe.json). A small runtime handles anonymous identity, JSON input, `file://` uploads, polling and downloads. The package is not published yet (`"private": true`).
+Commands, parameters, types and machine-readable help are generated from the OpenAPI snapshot in [openapi/tweenframe.json](openapi/tweenframe.json). A small runtime handles anonymous identity, JSON input, `file://` uploads, polling and downloads.
+
+## Install
+
+```sh
+npm install -g @tweenframe/cli   # or run without installing: npx @tweenframe/cli help
+```
 
 ## Usage
 
@@ -79,3 +85,18 @@ npm install --prefix /tmp/tweenframe-cli-local /tmp/tweenframe-cli-0.1.0.tgz
 ```
 
 Source layout: `src/cli.ts` registers commands, `src/api.ts` handles HTTP and auth, `src/inputs.ts` handles input JSON and `file://` values, `src/renders.ts` renders, polls and downloads, `src/help.ts` and `src/guides.ts` render help and fetch guides. `src/generated/` is produced by `scripts/generate.mjs`; do not edit it.
+
+## Releasing
+
+`.github/workflows/release.yml` publishes to npm when a `v*` tag is pushed: it checks that the tag matches
+`package.json`, runs typecheck and tests, and publishes with provenance.
+
+```sh
+npm version patch        # bumps package.json, commits and tags v<version>
+git push --follow-tags
+```
+
+Publishing uses npm trusted publishing (OIDC from GitHub Actions). The very first publish needs an `NPM_TOKEN`
+repository secret, because a trusted publisher can only be configured for an existing package; after that, add
+this repository and `release.yml` as the trusted publisher in the package settings on npmjs.com and delete the
+secret.

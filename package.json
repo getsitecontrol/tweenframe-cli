@@ -1,7 +1,23 @@
 {
   "name": "@tweenframe/cli",
   "version": "0.1.0",
-  "private": true,
+  "description": "Command-line client for the TweenFrame public recipe API: render animated GIFs, videos and images from recipes.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/getsitecontrol/tweenframe-cli.git"
+  },
+  "homepage": "https://github.com/getsitecontrol/tweenframe-cli#readme",
+  "bugs": {
+    "url": "https://github.com/getsitecontrol/tweenframe-cli/issues"
+  },
+  "keywords": [
+    "tweenframe",
+    "cli",
+    "gif",
+    "animation",
+    "agent"
+  ],
   "publishConfig": {
     "access": "public"
   },
