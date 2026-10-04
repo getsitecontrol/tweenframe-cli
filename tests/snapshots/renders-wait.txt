@@ -19,4 +19,4 @@ Output: JSON on stdout as {"data": ...}. Errors as {"error": {code, message, hin
 Examples:
   tweenframe renders wait --input pending.json --output out/banner.gif
 
-Docs: https://api.test/docs/agent/recipes.md
+Docs: https://api.test/docs/agent/output.md

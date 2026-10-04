@@ -1,4 +1,4 @@
-// Generated from openapi/tweenframe.json (sha256 ed953f610400). Do not edit.
+// Generated from openapi/tweenframe.json (sha256 0b2326bd1640). Do not edit.
 export const meta = {
   "title": "TweenFrame Public API",
   "description": "Render TweenFrame catalog recipes (animated GIF, WebP, video) from the command line. Results print as one JSON document on stdout, errors as one on stderr with a hint and a docs link.",
@@ -19,7 +19,7 @@ export const meta = {
     },
     {
       "name": "assets",
-      "description": "Images for recipe inputs: upload, then analyze for a focal point and crops.",
+      "description": "Images for recipe inputs: upload them; analyzing one for a focal point and crops is optional.",
       "docs": "/docs/agent/assets.md"
     },
     {
@@ -83,7 +83,8 @@ export const operations = [
     "description": "Returns what a render needs: `input_schema` (JSON Schema 2020-12; `required` lists the inputs without a default, usually the user's own data), `asset_paths` (where images go), the default `output` options and named `examples` (complete inputs objects, at least `minimal` and `full`). Start from an example and change only what the user asked for. No token needed.",
     "examples": [
       "tweenframe recipes show real-estate/banner-7",
-      "tweenframe recipes show real-estate/banner-7@1"
+      "tweenframe recipes show real-estate/banner-7 --example minimal > work/inputs.json",
+      "tweenframe recipes show real-estate/banner-7@1 --json"
     ],
     "docs": "/docs/agent/recipes.md",
     "arguments": {
@@ -200,7 +201,7 @@ export const operations = [
       "tweenframe recipes render before-after/default --input inputs.json --format mp4 --wait --output out/compare.mp4",
       "tweenframe recipes render animated-text/loop --input - --format webp --width 600 --wait --output out/title.webp < inputs.json"
     ],
-    "docs": "/docs/agent/recipes.md",
+    "docs": "/docs/agent/output.md",
     "arguments": {
       "recipe": "Recipe id from `recipes list`; append @<version> only to pin a version."
     },
@@ -228,7 +229,7 @@ export const operations = [
     "examples": [
       "tweenframe renders wait --input pending.json --output out/banner.gif"
     ],
-    "docs": "/docs/agent/recipes.md",
+    "docs": "/docs/agent/output.md",
     "arguments": {},
     "method": "GET",
     "path": "/renders/{jobKey}",
@@ -296,6 +297,7 @@ export const outputOptions = {
   "scale": {
     "type": "number",
     "exclusiveMinimum": 0,
+    "maximum": 5,
     "description": "Multiplier of the canvas size; when set, width is ignored. Not for svg or pdf."
   },
   "fps": {
@@ -813,6 +815,11 @@ export const schemas = {
         "type": "integer",
         "minimum": 0,
         "description": "List inputs."
+      },
+      "media": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Media inputs (a picture, GIF or video with focus and crop); a list of media counts once."
       }
     },
     "required": [
@@ -820,7 +827,8 @@ export const schemas = {
       "assets",
       "texts",
       "colors",
-      "lists"
+      "lists",
+      "media"
     ]
   },
   "RecipeList": {
@@ -905,7 +913,7 @@ export const schemas = {
       "input_schema": {
         "type": "object",
         "additionalProperties": true,
-        "description": "JSON Schema 2020-12 of the inputs object. Inputs listed in `required` have no default; every other input has one, so omit what you do not change."
+        "description": "JSON Schema 2020-12 of the inputs object. Inputs listed in `required` have no default; every other input has one, so omit what you do not change. Standard input types (Media, Typography, Look) and the recipe's own types are `$defs`; `x-shown-when` marks a field that matters only when another input is set."
       },
       "asset_paths": {
         "type": "array",
@@ -1005,6 +1013,7 @@ export const schemas = {
       "scale": {
         "type": "number",
         "exclusiveMinimum": 0,
+        "maximum": 5,
         "description": "Multiplier of the canvas size; when set, width is ignored. Not for svg or pdf."
       },
       "fps": {
@@ -1087,13 +1096,21 @@ export const schemas = {
           "version",
           "hash"
         ]
+      },
+      "docs": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "`output`: formats, sizes, frame rate, quality presets and file size troubleshooting."
       }
     },
     "required": [
       "status",
       "uid",
       "result_url",
-      "format"
+      "format",
+      "docs"
     ]
   },
   "RenderPending": {
@@ -1116,13 +1133,21 @@ export const schemas = {
       "poll_token": {
         "type": "string",
         "description": "The `t` query value of poll_url."
+      },
+      "docs": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "`output`: formats, sizes, frame rate, quality presets and file size troubleshooting."
       }
     },
     "required": [
       "status",
       "uid",
       "poll_url",
-      "poll_token"
+      "poll_token",
+      "docs"
     ]
   },
   "RenderFailed": {
@@ -1140,12 +1165,20 @@ export const schemas = {
       },
       "error": {
         "$ref": "#/components/schemas/ErrorBody"
+      },
+      "docs": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "`output`: formats, sizes, frame rate, quality presets and file size troubleshooting."
       }
     },
     "required": [
       "status",
       "uid",
-      "error"
+      "error",
+      "docs"
     ]
   },
   "Render": {

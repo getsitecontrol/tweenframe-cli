@@ -52,6 +52,7 @@ test("command help names types, ranges, allowed values and a docs link", async (
   assert.match(stdout, /--quality <maximum\|normal\|minimal>/);
   assert.match(stdout, /--fps <0\.\.30> +[^]*?0 keeps the recipe.s authored frame rate/);
   assert.match(stdout, /--input <json\|file\|->/);
+  assert.match(stdout, /--scale <0\.\.5> +[^]*?greater\s+than\s+0\s+and\s+at\s+most\s+5/);
   assert.match(stdout, /^Docs: https:\/\/api\.test\/docs\/agent\//m);
   for (const command of ["auth status", "renders wait", "docs", "help", "assets upload"]) {
     const help = (await cli(...command.split(" "), "--help")).stdout;

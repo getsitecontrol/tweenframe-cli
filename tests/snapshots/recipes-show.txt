@@ -1,9 +1,15 @@
-Usage: tweenframe recipes show <id> [version]
+Usage: tweenframe recipes show <id> [version] [options]
 
 Returns what a render needs: `input_schema` (JSON Schema 2020-12; `required` lists the inputs
 without a default, usually the user's own data), `asset_paths` (where images go), the default
 `output` options and named `examples` (complete inputs objects, at least `minimal` and `full`).
 Start from an example and change only what the user asked for. No token needed.
+
+The CLI prints a readable summary: title and description, one line per input (type, required or
+default, first sentence of its description; nested fields indented, list items as name[], grouped as
+in the web tool), the shared types such as Media, the image paths, the output defaults and the
+example names. --json prints the full response for programs; --example <name> prints one example's
+inputs.
 
 Arguments:
   id                        Recipe id from `recipes list`, e.g. real-estate/banner-7; append
@@ -13,13 +19,18 @@ Arguments:
                             <id>@<version>.
 
 Options:
+  --json                    Print the full response as {"data": ...}: input_schema, asset_paths,
+                            output, examples.
+  --example <name>          Print only that example's inputs as JSON, ready to save as the --input
+                            file of `recipes render`.
   -h, --help                Show this help.
 
-Output: JSON on stdout as {"data": ...}. Errors as {"error": {code, message, hint, docs}} on stderr,
-        exit code 1.
+Output: Text on stdout; with --json, {"data": ...}; with --example, the example's inputs as JSON.
+        Errors as {"error": {code, message, hint, docs}} on stderr, exit code 1.
 
 Examples:
   tweenframe recipes show real-estate/banner-7
-  tweenframe recipes show real-estate/banner-7@1
+  tweenframe recipes show real-estate/banner-7 --example minimal > work/inputs.json
+  tweenframe recipes show real-estate/banner-7@1 --json
 
 Docs: https://api.test/docs/agent/recipes.md

@@ -1,4 +1,4 @@
-// Generated from openapi/tweenframe.json (sha256 ed953f610400). Do not edit.
+// Generated from openapi/tweenframe.json (sha256 0b2326bd1640). Do not edit.
 export type ErrorBody = { "code": string; "message": string; "details"?: Record<string, unknown>; "hint": string; "docs": string; "reference"?: string; "output_reference"?: string; };
 export type Error = { "error": ErrorBody; };
 export type AnonymousIdentity = { "id": string; "token": string; "expires_at": string; "docs"?: Record<string, string>; };
@@ -9,16 +9,16 @@ export type AnalysisCrop = { "x": number; "y": number; "w": number; "h": number;
 export type AnalysisFace = { "x": number; "y": number; "w": number; "h": number; "score": number; "primary": boolean; };
 export type AssetAnalysis = { "contract_version": number; "model_version": Record<string, string>; "image": { "width": number; "height": number; "orientation_applied": boolean; }; "focal": { "x": number; "y": number; "source": "face" | "saliency" | "center"; "confidence": number; }; "subject": { "x": number; "y": number; "w": number; "h": number; } | null; "object_position": AnalysisPoint; "faces": Array<AnalysisFace>; "crops": Record<string, AnalysisCrop>; "warnings": Array<{ "code": string; "message": string; }>; "docs"?: Record<string, string>; };
 export type RecipeSummary = { "id": string; "version": number; "title": string; "description": string; "tags": Array<string>; "preview_url": string; "inputs_summary": InputsSummary; };
-export type InputsSummary = { "required": Array<string>; "assets": Array<{ "path": Array<string>; "min": number; "max": number | null; }>; "texts": number; "colors": number; "lists": number; };
+export type InputsSummary = { "required": Array<string>; "assets": Array<{ "path": Array<string>; "min": number; "max": number | null; }>; "texts": number; "colors": number; "lists": number; "media": number; };
 export type RecipeList = { "recipes": Array<RecipeSummary>; "docs": Record<string, string>; };
 export type RecipeExample = { "name": string; "description"?: string; "inputs": Record<string, unknown>; };
 export type RecipeDetail = { "id": string; "version": number; "title": string; "description": string; "tags": Array<string>; "preview_url": string; "inputs_summary": InputsSummary; "input_schema": Record<string, unknown>; "asset_paths": Array<Array<string>>; "output": OutputOptions; "examples": Array<RecipeExample>; "docs": Record<string, string>; };
 export type RecipeRef = { "id": string; "version"?: number; };
 export type OutputOptions = { "format"?: "gif" | "webp" | "apng" | "mp4" | "webm" | "png" | "jpeg" | "svg" | "pdf"; "quality"?: "maximum" | "normal" | "minimal"; "width"?: number; "scale"?: number; "fps"?: number; "loop"?: boolean; };
 export type RenderRequest = { "recipe": RecipeRef; "inputs": Record<string, unknown>; "output"?: OutputOptions; };
-export type RenderCompleted = { "status": "completed"; "uid": string; "result_url": string; "format": string; "stats"?: Record<string, unknown>; "recipe"?: { "id": string; "version": number; "hash": string; }; };
-export type RenderPending = { "status": "pending"; "uid": string; "poll_url": string; "poll_token": string; };
-export type RenderFailed = { "status": "failed"; "uid": string; "error": ErrorBody; };
+export type RenderCompleted = { "status": "completed"; "uid": string; "result_url": string; "format": string; "stats"?: Record<string, unknown>; "recipe"?: { "id": string; "version": number; "hash": string; }; "docs": Record<string, string>; };
+export type RenderPending = { "status": "pending"; "uid": string; "poll_url": string; "poll_token": string; "docs": Record<string, string>; };
+export type RenderFailed = { "status": "failed"; "uid": string; "error": ErrorBody; "docs": Record<string, string>; };
 export type Render = RenderCompleted | RenderPending | RenderFailed;
 
 export type OperationResponses = {

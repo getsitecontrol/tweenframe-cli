@@ -25,7 +25,8 @@ export function placeholder(schema: Schema): string {
   if (schema.enum) return `<${schema.enum.join("|")}>`;
   if (schema.type === "boolean") return "<true|false>";
   if (schema.type === "integer" || schema.type === "number") {
-    if (schema.minimum !== undefined && schema.maximum !== undefined) return `<${schema.minimum}..${schema.maximum}>`;
+    const low = schema.minimum ?? schema.exclusiveMinimum;
+    if (low !== undefined && schema.maximum !== undefined) return `<${low}..${schema.maximum}>`;
     return `<${schema.type}>`;
   }
   return "<string>";

@@ -17,8 +17,8 @@ Commands:
                                     examples
     recipes render <recipe> --input <json|file|->
                                     Render a recipe
-  assets                            Images for recipe inputs: upload, then analyze for a focal point
-                                    and crops.
+  assets                            Images for recipe inputs: upload them; analyzing one for a focal
+                                    point and crops is optional.
     assets upload <file>            Upload one image (JPEG, PNG, WebP or GIF, up to 25 MB)
     assets analyze <source>         Find the focal point, subject box and a cover crop per aspect of
                                     an image
@@ -32,7 +32,7 @@ Run `tweenframe <group>` for a group and `tweenframe <group> <command> --help` f
 options, allowed values and examples. `tweenframe docs` lists the guides.
 
 Output:
-  JSON on stdout            {"data": ...}
+  JSON on stdout            {"data": ...}; `recipes show` prints text unless --json
   errors on stderr          {"error": {code, message, hint, docs}}, exit code 1
 
 Environment:

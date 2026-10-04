@@ -21,6 +21,13 @@ const modeNotes: Partial<Record<Operation["mode"], string>> = {
   wait: "The CLI polls the render every 1.5 s for up to 6 minutes; with --output it downloads the result.",
 };
 
+const showNote = "The CLI prints a readable summary: title and description, one line per input (type, required or "
+  + "default, first sentence of its description; nested fields indented, list items as name[], grouped as in the "
+  + "web tool), the shared types such as Media, the image paths, the output defaults and the example names. --json prints the full response for programs; --example <name> prints one "
+  + "example's inputs.";
+const showOutput = "Text on stdout; with --json, {\"data\": ...}; with --example, the example's inputs as JSON. "
+  + "Errors as {\"error\": {code, message, hint, docs}} on stderr, exit code 1.";
+
 function schemaOption(name: string, schema: Schema, defaultText: string): OptionDoc {
   const parts = [schema.description ?? ""];
   if (!schema.enum && schema.type !== "boolean") parts.push(sentence(allowed(schema)));
@@ -53,6 +60,11 @@ function operationDoc(op: Operation): CommandDoc {
       name: "version", required: false,
       description: `${version?.description || "Recipe version."} ${sentence(allowed(schema))} Same as <id>@<version>.`,
     });
+    options.push({ flags: "--json", description: "Print the full response as {\"data\": ...}: input_schema, asset_paths, output, examples." });
+    options.push({
+      flags: "--example <name>",
+      description: "Print only that example's inputs as JSON, ready to save as the --input file of `recipes render`.",
+    });
   }
   if (op.mode === "analyze") {
     const aspects = schemas.AnalyzeRequest.properties.aspects;
@@ -63,7 +75,8 @@ function operationDoc(op: Operation): CommandDoc {
   }
   if (op.mode === "render") {
     options.push(inputOption("Required. Recipe inputs as a JSON object: inline JSON, a JSON file path, or - for stdin. "
-      + "Start from an example in `tweenframe recipes show <id>`; local images go in as file:// URLs at the recipe's asset_paths."));
+      + "Start from an example: `tweenframe recipes show <id> --example minimal > inputs.json`; local images go in as "
+      + "file:// URLs at the recipe's asset_paths."));
     options.push({ flags: "--wait", description: "Poll until the render completes or fails and print the final render." });
     options.push(outputFile(true));
     for (const [name, schema] of Object.entries(outputOptions))
@@ -78,11 +91,12 @@ function operationDoc(op: Operation): CommandDoc {
   return {
     path: op.command,
     summary: op.summary,
-    description: [op.description, modeNotes[op.mode]].filter(Boolean).join("\n\n"),
+    description: [op.description, op.operationId === "getRecipe" ? showNote : modeNotes[op.mode]].filter(Boolean).join("\n\n"),
     arguments: args,
     options,
     examples: [...op.examples],
     docs: op.docs ? docsUrl(op.docs) : groupDocs(group),
+    ...(op.operationId === "getRecipe" ? { output: showOutput } : {}),
   };
 }
 
@@ -133,7 +147,7 @@ export function groupDocsList(): GroupDoc[] {
   });
 }
 
-function wrap(text: string, indent: number, first = indent): string {
+export function wrap(text: string, indent: number, first = indent): string {
   const lines: string[] = [];
   for (const paragraph of text.split("\n")) {
     let line = "";
@@ -211,7 +225,7 @@ export function programHelp(version: string): string {
     "Commands:\n" + table(rows, 34),
     wrap("Run `tweenframe <group>` for a group and `tweenframe <group> <command> --help` for arguments, options, "
       + "allowed values and examples. `tweenframe docs` lists the guides.", 0),
-    "Output:\n" + table([["JSON on stdout", "{\"data\": ...}"], ["errors on stderr", "{\"error\": {code, message, hint, docs}}, exit code 1"]]),
+    "Output:\n" + table([["JSON on stdout", "{\"data\": ...}; `recipes show` prints text unless --json"], ["errors on stderr", "{\"error\": {code, message, hint, docs}}, exit code 1"]]),
     "Environment:\n" + table([
       ["TWEENFRAME_API_URL", `API base URL; now ${apiUrl}`],
       ["TWEENFRAME_TOKEN", "Bearer token; overrides the stored identity"],

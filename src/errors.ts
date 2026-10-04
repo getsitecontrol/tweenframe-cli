@@ -9,7 +9,7 @@ const hints: Record<string, string> = {
   usage: "Run the command with --help to see its arguments, options and examples.",
   unknown_command: "Run `tweenframe help` to list the commands.",
   invalid_value: "Use a value from the range or list in the message; `<command> --help` shows every option.",
-  invalid_json: "Pass a JSON object inline, as a file path or as - for stdin; start from an example in `tweenframe recipes show <id>`.",
+  invalid_json: "Pass a JSON object inline, as a file path or as - for stdin; start from `tweenframe recipes show <id> --example minimal`.",
   input_read_failed: "Check that the --input file exists and is readable, or pass the JSON inline.",
   invalid_input: "Compare the input with the recipe's input_schema and asset_paths from `tweenframe recipes show <id>`.",
   file_not_found: "Check the path; relative paths resolve against the current directory.",

@@ -12,9 +12,43 @@ const gif = Buffer.from("GIF89a");
 const detail = {
   id: "real-estate/banner-7", version: 1, title: "Banner", description: "d", tags: [], preview_url: "/p.webp",
   asset_paths: [["photos", "*", "src"]],
-  input_schema: { type: "object", properties: { headline: { type: "string" }, photos: { type: "array" } } },
+  input_schema: {
+    type: "object", required: ["photos"],
+    $defs: {
+      Media: {
+        type: "object", required: ["src"],
+        properties: {
+          src: { type: "string", "x-input-type": "asset", description: "Photo, e.g. a file:// URL." },
+          focus: { type: "array", items: { type: "number", minimum: 0, maximum: 1 }, minItems: 2, maxItems: 2, description: "Crop focus." },
+        },
+      },
+    },
+    properties: {
+      headline: { type: "string", default: "LOFT", description: "Headline. Shown at the top." },
+      photos: {
+        type: "array", minItems: 1, description: "Photos in order.", "x-group": "Photos",
+        items: { $ref: "#/$defs/Media", "x-accept": ["image"] },
+      },
+      logo: {
+        anyOf: [{ $ref: "#/$defs/Media" }, { type: "null" }], default: null, description: "Logo.", "x-group": "Photos",
+        "x-accept": ["image", "gif"],
+      },
+      phone: { type: "string", description: "Phone.", "x-group": "Contacts" },
+      contact_title: { type: "string", default: "Call", description: "Heading.", "x-group": "Contacts",
+        "x-shown-when": { any: ["phone"] } },
+      layout: {
+        type: "object", description: "Layout.",
+        properties: {
+          grid: { type: "object", description: "Grid.", properties: { gap: { type: "number", description: "Gap." } } },
+          side: { enum: ["left", "right"], "x-shown-when": { param: "mode", in: ["split"] }, description: "Side." },
+          note: { type: "string", "x-shown-when": { param: "headline" }, description: "Note." },
+        },
+      },
+    },
+  },
   output: { format: "gif", fps: 20, width: 900 },
-  examples: [],
+  docs: { guide: "/docs/agent/recipes.md" },
+  examples: [{ name: "minimal", description: "One photo.", inputs: { photos: [{ src: "/template-catalog/assets/a.jpg" }] } }],
 };
 const guides = [
   { name: "skill", title: "TweenFrame skill", description: "Setup and workflow.", url: "/docs/agent/SKILL.md" },
@@ -130,7 +164,7 @@ test("auth, catalog, render with polling, download and renders wait", async () =
   assert.equal((await ok("auth", "init")).id, "tf_test");
   assert.equal((await ok("auth", "status")).authenticated, true);
   assert.equal((await ok("recipes", "list")).recipes[0].id, "real-estate/banner-7");
-  assert.equal((await ok("recipes", "show", "real-estate/banner-7")).version, 1);
+  assert.equal((await ok("recipes", "show", "real-estate/banner-7", "--json")).version, 1);
   assert.equal(calls.at(-1).url, `${api}/recipes/real-estate/banner-7`);
 
   const [one, two] = [await photo("one"), await photo("two")];
@@ -180,11 +214,46 @@ test("recipes show pins a version with id@version or a second argument", async (
   await ok("auth", "init");
   for (const args of [["real-estate/banner-7@1"], ["real-estate/banner-7", "1"]]) {
     calls = [];
-    assert.equal((await ok("recipes", "show", ...args)).id, "real-estate/banner-7");
+    assert.equal((await ok("recipes", "show", ...args, "--json")).id, "real-estate/banner-7");
     assert.equal(calls[0].url, `${api}/recipes/real-estate/banner-7?version=1`);
   }
   const error = await fails(["recipes", "show", "real-estate/banner-7@2"]);
   assert.equal(error.code, "recipe_not_found");
+});
+
+test("recipes show prints a readable summary, --example prints one example's inputs", async () => {
+  const { code, stdout } = await run(["recipes", "show", "real-estate/banner-7"]);
+  assert.equal(code, 0);
+  assert.match(stdout, /^real-estate\/banner-7@1: Banner\n/);
+  assert.match(stdout, /^  headline +string +default "LOFT" +Headline\.$/m);
+  assert.match(stdout, /^  photos\[\] +Media \(image only\) +required +Photos in order\.$/m);
+  assert.match(stdout, /^    src +image +required +Photo, e\.g\. a file:\/\/ URL\.$/m);
+  assert.match(stdout, /^    focus +number\[2\] 0\.\.1 +optional +Crop focus\.$/m);
+  assert.match(stdout, /^    grid +object +optional +Grid\. Fields: gap\.$/m, "deeper fields are named, not listed");
+  assert.match(stdout, /^    side +left\|right +optional +\(when mode is split\) Side\.$/m);
+  assert.match(stdout, /^    note +string +optional +\(when headline is set\) Note\.$/m);
+  assert.match(stdout, /^  logo +Media \| null \(image\|gif\) +default null +Logo\. Fields as under photos\[\]\.$/m,
+    "a shared type is expanded once");
+  assert.match(stdout, /^  \[Contacts\]\n  phone .*\n  contact_title .*\(when phone is set\) Heading\.$/m);
+  assert.match(stdout, /^  \[Photos\]\n  photos\[\]/m);
+  assert.ok(stdout.indexOf("  headline") < stdout.indexOf("  [Contacts]"), "ungrouped inputs come first");
+  assert.match(stdout, /^Types .*\n  Media  Fields: src, focus\.$/m);
+  assert.match(stdout, /^Images: photos\[\]\.src\./m);
+  assert.match(stdout, /^Output defaults: format gif, fps 20, width 900\./m);
+  assert.match(stdout, /^  minimal +One photo\.$/m);
+  assert.match(stdout, /^Docs: http:\/\/127\.0\.0\.1:\d+\/docs\/agent\/recipes\.md$/m);
+
+  const example = await run(["recipes", "show", "real-estate/banner-7", "--example", "minimal"]);
+  assert.equal(example.code, 0);
+  assert.deepEqual(JSON.parse(example.stdout), detail.examples[0].inputs);
+
+  const unknown = await fails(["recipes", "show", "real-estate/banner-7", "--example", "full"]);
+  assert.equal(unknown.code, "invalid_value");
+  assert.deepEqual(unknown.details.allowed, ["minimal"]);
+  calls = [];
+  const both = await fails(["recipes", "show", "real-estate/banner-7", "--json", "--example", "minimal"]);
+  assert.equal(both.code, "usage");
+  assert.equal(calls.length, 0, "a usage error sends no request");
 });
 
 test("API error envelope goes to stderr with an absolute docs link and exit code 1", async () => {
@@ -348,7 +417,8 @@ test("local errors name the allowed values and carry hint and docs", async () =>
     [[...render, "--fps", "31"], "invalid_value", /--fps must be a number from 0 to 30/],
     [[...render, "--quality", "best"], "invalid_value", /--quality must be one of: maximum, normal, minimal/],
     [[...render, "--loop", "yes"], "invalid_value", /--loop must be true or false/],
-    [[...render, "--scale", "0"], "invalid_value", /--scale must be a number greater than 0/],
+    [[...render, "--scale", "0"], "invalid_value", /--scale must be a number greater than 0 and at most 5/],
+    [[...render, "--scale", "5.5"], "invalid_value", /--scale must be a number greater than 0 and at most 5; got "5.5"/],
     [["recipes", "render", "real-estate/banner-7@x", "--input", "{}"], "usage", /integer version of at least 1/],
     [["recipes", "render", "real-estate/banner-7", "--input", "[1]"], "invalid_json", /JSON object; got an array/],
     [["assets", "analyze", "https://assets.test/a.png", "--aspect", "4/5"], "invalid_value", /width:height .* e\.g\. 4:5/],

@@ -10,8 +10,10 @@ import { commandDocs, commandHelp, groupDocsList, groupHelp, programHelp, type C
 import { guideList, guideText, guides } from "./guides.js";
 import { analyzeSource, type AnalyzeOptions } from "./analyze.js";
 import { CliError, type Json } from "./errors.js";
+import type { RecipeDetail } from "./generated/types.js";
 import { selector } from "./inputs.js";
 import { startRender, waitRender, type RenderOptions } from "./renders.js";
+import { exampleInputs, recipeSummary, type ShowOptions } from "./show.js";
 
 const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
 const emit = (data: unknown): void => { process.stdout.write(JSON.stringify({ data }) + "\n"); };
@@ -32,6 +34,8 @@ async function execute(op: Operation, args: string[], options: Json): Promise<un
         const reference = selector(String(args[0] ?? ""));
         if (reference.version !== undefined && args[1] !== undefined)
           throw new CliError("usage", "Give the version either as <id>@<version> or as a second argument, not both.");
+        if (options.json && options.example !== undefined)
+          throw new CliError("usage", "Use either --json or --example, not both.");
         Object.assign(values, { id: reference.id, version: args[1] ?? reference.version });
       }
       return request(op.operationId, values);
@@ -91,7 +95,12 @@ for (const op of operations) {
   const [groupName, actionName] = op.command.split(" ");
   register(groups.get(groupName)!, actionName, docOf(op.command)).action(async (...received: unknown[]) => {
     const cliCommand = received.at(-1) as Command;
-    emit(await execute(op, cliCommand.args, cliCommand.opts() as Json));
+    const options = cliCommand.opts() as Json;
+    const result = await execute(op, cliCommand.args, options);
+    if (op.operationId !== "getRecipe" || options.json) return emit(result);
+    const detail = result as RecipeDetail;
+    const { example } = options as ShowOptions;
+    process.stdout.write(example === undefined ? recipeSummary(detail) : JSON.stringify(exampleInputs(detail, example), null, 2) + "\n");
   });
 }
 register(groups.get("auth")!, "status", docOf("auth status")).action(async () => {

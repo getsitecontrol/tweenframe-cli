@@ -15,8 +15,9 @@ Arguments:
 
 Options:
   --input <json|file|->     Required. Recipe inputs as a JSON object: inline JSON, a JSON file path,
-                            or - for stdin. Start from an example in `tweenframe recipes show <id>`;
-                            local images go in as file:// URLs at the recipe's asset_paths.
+                            or - for stdin. Start from an example: `tweenframe recipes show <id>
+                            --example minimal > inputs.json`; local images go in as file:// URLs at
+                            the recipe's asset_paths.
   --wait                    Poll until the render completes or fails and print the final render.
   --output <file>           Wait for completion and download the result to this file; parent
                             directories are created. Implies --wait.
@@ -29,8 +30,9 @@ Options:
   --width <16..3000>        Output width in pixels; height follows the canvas aspect. Rescales the
                             rendered canvas, so one inputs object serves every size. An integer from
                             16 to 3000. Default: the recipe's output.width.
-  --scale <number>          Multiplier of the canvas size; when set, width is ignored. Not for svg
-                            or pdf. A number greater than 0. Default: the recipe's output.scale.
+  --scale <0..5>            Multiplier of the canvas size; when set, width is ignored. Not for svg
+                            or pdf. A number greater than 0 and at most 5. Default: the recipe's
+                            output.scale.
   --fps <0..30>             Frames per second, 0-30; 0 keeps the recipe's authored frame rate.
                             Animated formats only. A GIF keeps per-frame delays, so its effective
                             rate can be lower. A number from 0 to 30. Default: the recipe's
@@ -47,4 +49,4 @@ Examples:
   tweenframe recipes render before-after/default --input inputs.json --format mp4 --wait --output out/compare.mp4
   tweenframe recipes render animated-text/loop --input - --format webp --width 600 --wait --output out/title.webp < inputs.json
 
-Docs: https://api.test/docs/agent/recipes.md
+Docs: https://api.test/docs/agent/output.md

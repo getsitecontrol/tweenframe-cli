@@ -3,7 +3,7 @@
   "info": {
     "title": "TweenFrame Public API",
     "version": "0.2.0",
-    "description": "Render curated catalog recipes into animated GIF, WebP, APNG, MP4, WebM or still images.\n\nFlow: create an anonymous identity (POST /identity), pick a recipe (GET /recipes), read its input_schema and examples (GET /recipes/{id}), upload local images as assets (POST /assets), post a render (POST /renders) and poll it until it completes (GET /renders/{jobKey}).\n\nEvery error is `{error: {code, message, details?, hint, docs}}`: `hint` says what to do next and `docs` links the code's section in the errors guide.\n\nGuides (origin-relative, plain Markdown): skill /docs/agent/SKILL.md, recipes /docs/agent/recipes.md, assets /docs/agent/assets.md, errors /docs/agent/errors.md, HTTP API /docs/agent/api.md; index /docs/agent/index.json.",
+    "description": "Render curated catalog recipes into animated GIF, WebP, APNG, MP4, WebM or still images.\n\nFlow: create an anonymous identity (POST /identity), pick a recipe (GET /recipes), read its input_schema and examples (GET /recipes/{id}), upload local images as assets (POST /assets), post a render (POST /renders) and poll it until it completes (GET /renders/{jobKey}).\n\nEvery error is `{error: {code, message, details?, hint, docs}}`: `hint` says what to do next and `docs` links the code's section in the errors guide.\n\nGuides (origin-relative, plain Markdown): skill /docs/agent/SKILL.md, recipes /docs/agent/recipes.md, output /docs/agent/output.md, assets /docs/agent/assets.md, errors /docs/agent/errors.md, HTTP API /docs/agent/api.md; index /docs/agent/index.json.",
     "x-cli": {
       "description": "Render TweenFrame catalog recipes (animated GIF, WebP, video) from the command line. Results print as one JSON document on stdout, errors as one on stderr with a hint and a docs link.",
       "docs": "/docs/agent/SKILL.md",
@@ -32,7 +32,7 @@
     },
     {
       "name": "assets",
-      "description": "Images for recipe inputs: upload, then analyze for a focal point and crops.",
+      "description": "Images for recipe inputs: upload them; analyzing one for a focal point and crops is optional.",
       "externalDocs": {
         "url": "/docs/agent/assets.md"
       }
@@ -678,6 +678,11 @@
             "type": "integer",
             "minimum": 0,
             "description": "List inputs."
+          },
+          "media": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Media inputs (a picture, GIF or video with focus and crop); a list of media counts once."
           }
         },
         "required": [
@@ -685,7 +690,8 @@
           "assets",
           "texts",
           "colors",
-          "lists"
+          "lists",
+          "media"
         ]
       },
       "RecipeList": {
@@ -770,7 +776,7 @@
           "input_schema": {
             "type": "object",
             "additionalProperties": true,
-            "description": "JSON Schema 2020-12 of the inputs object. Inputs listed in `required` have no default; every other input has one, so omit what you do not change."
+            "description": "JSON Schema 2020-12 of the inputs object. Inputs listed in `required` have no default; every other input has one, so omit what you do not change. Standard input types (Media, Typography, Look) and the recipe's own types are `$defs`; `x-shown-when` marks a field that matters only when another input is set."
           },
           "asset_paths": {
             "type": "array",
@@ -870,6 +876,7 @@
           "scale": {
             "type": "number",
             "exclusiveMinimum": 0,
+            "maximum": 5,
             "description": "Multiplier of the canvas size; when set, width is ignored. Not for svg or pdf."
           },
           "fps": {
@@ -952,13 +959,21 @@
               "version",
               "hash"
             ]
+          },
+          "docs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "`output`: formats, sizes, frame rate, quality presets and file size troubleshooting."
           }
         },
         "required": [
           "status",
           "uid",
           "result_url",
-          "format"
+          "format",
+          "docs"
         ]
       },
       "RenderPending": {
@@ -981,13 +996,21 @@
           "poll_token": {
             "type": "string",
             "description": "The `t` query value of poll_url."
+          },
+          "docs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "`output`: formats, sizes, frame rate, quality presets and file size troubleshooting."
           }
         },
         "required": [
           "status",
           "uid",
           "poll_url",
-          "poll_token"
+          "poll_token",
+          "docs"
         ]
       },
       "RenderFailed": {
@@ -1005,12 +1028,20 @@
           },
           "error": {
             "$ref": "#/components/schemas/ErrorBody"
+          },
+          "docs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "`output`: formats, sizes, frame rate, quality presets and file size troubleshooting."
           }
         },
         "required": [
           "status",
           "uid",
-          "error"
+          "error",
+          "docs"
         ]
       },
       "Render": {
@@ -1128,7 +1159,8 @@
           },
           "examples": [
             "tweenframe recipes show real-estate/banner-7",
-            "tweenframe recipes show real-estate/banner-7@1"
+            "tweenframe recipes show real-estate/banner-7 --example minimal > work/inputs.json",
+            "tweenframe recipes show real-estate/banner-7@1 --json"
           ],
           "docs": "/docs/agent/recipes.md"
         },
@@ -1361,7 +1393,7 @@
             "tweenframe recipes render before-after/default --input inputs.json --format mp4 --wait --output out/compare.mp4",
             "tweenframe recipes render animated-text/loop --input - --format webp --width 600 --wait --output out/title.webp < inputs.json"
           ],
-          "docs": "/docs/agent/recipes.md"
+          "docs": "/docs/agent/output.md"
         },
         "security": [
           {
@@ -1443,7 +1475,7 @@
           "examples": [
             "tweenframe renders wait --input pending.json --output out/banner.gif"
           ],
-          "docs": "/docs/agent/recipes.md"
+          "docs": "/docs/agent/output.md"
         },
         "security": [
           {
