@@ -1,4 +1,4 @@
-// Generated from openapi/tweenframe.json (sha256 2c9c9e89e145). Do not edit.
+// Generated from openapi/tweenframe.json (sha256 e50ddda76839). Do not edit.
 export const meta = {
   "title": "TweenFrame Public API",
   "description": "Render TweenFrame catalog recipes (animated GIF, WebP, video) from the command line. Results print as one JSON document on stdout, errors as one on stderr with a hint and a docs link.",
@@ -14,8 +14,13 @@ export const meta = {
     },
     {
       "name": "recipes",
-      "description": "Catalog of public recipes: list them, read one's inputs and examples, render it.",
+      "description": "Catalog of public recipes: list them, read one's inputs and examples, render it; list the fonts text inputs take.",
       "docs": "/docs/agent/recipes.md"
+    },
+    {
+      "name": "fonts",
+      "description": "",
+      "docs": null
     },
     {
       "name": "assets",
@@ -205,6 +210,29 @@ export const operations = [
     "bodySchema": null,
     "responseSchema": {
       "$ref": "#/components/schemas/RecipeDetail"
+    }
+  },
+  {
+    "operationId": "listFonts",
+    "command": "fonts list",
+    "mode": "request",
+    "summary": "List the fonts of the TweenFrame set",
+    "description": "Lists the font families of TweenFrame's own set, grouped by style. A Typography `font` input takes a name from here, or any Google Fonts family by its exact name; bold is `<Family> Bold`. A name that is neither is 422 unknown_font on render. No token needed.",
+    "examples": [
+      "tweenframe fonts list"
+    ],
+    "docs": "/docs/agent/recipes.md",
+    "arguments": {},
+    "method": "GET",
+    "path": "/fonts",
+    "authenticated": false,
+    "positionals": [],
+    "options": [],
+    "parameters": [],
+    "contentType": null,
+    "bodySchema": null,
+    "responseSchema": {
+      "$ref": "#/components/schemas/FontList"
     }
   },
   {
@@ -1024,6 +1052,51 @@ export const schemas = {
     },
     "required": [
       "recipes",
+      "docs"
+    ]
+  },
+  "FontList": {
+    "type": "object",
+    "properties": {
+      "groups": {
+        "type": "array",
+        "description": "Font families grouped by style.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Group id."
+            },
+            "name": {
+              "type": "string",
+              "description": "Group name."
+            },
+            "fonts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Family names, usable as a Typography `font` as written."
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "fonts"
+          ]
+        }
+      },
+      "docs": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "`guide`: how recipes work, including Typography."
+      }
+    },
+    "required": [
+      "groups",
       "docs"
     ]
   },

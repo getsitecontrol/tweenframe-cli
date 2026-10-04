@@ -1,4 +1,4 @@
-// Generated from openapi/tweenframe.json (sha256 2c9c9e89e145). Do not edit.
+// Generated from openapi/tweenframe.json (sha256 e50ddda76839). Do not edit.
 export type ErrorBody = { "code": string; "message": string; "details"?: Record<string, unknown>; "hint": string; "docs": string; "reference"?: string; "output_reference"?: string; };
 export type Error = { "error": ErrorBody; };
 export type AnonymousIdentity = { "id": string; "token": string; "expires_at": string; "docs"?: Record<string, string>; };
@@ -15,6 +15,7 @@ export type AssetAnalysis = { "contract_version": number; "model_version": Recor
 export type RecipeSummary = { "id": string; "version": number; "title": string; "description": string; "tags": Array<string>; "preview_url": string; "inputs_summary": InputsSummary; };
 export type InputsSummary = { "required": Array<string>; "assets": Array<{ "path": Array<string>; "min": number; "max": number | null; }>; "texts": number; "colors": number; "lists": number; "media": number; };
 export type RecipeList = { "recipes": Array<RecipeSummary>; "docs": Record<string, string>; };
+export type FontList = { "groups": Array<{ "id": string; "name": string; "fonts": Array<string>; }>; "docs": Record<string, string>; };
 export type RecipeExample = { "name": string; "description"?: string; "inputs": Record<string, unknown>; };
 export type RecipeDetail = { "id": string; "version": number; "title": string; "description": string; "tags": Array<string>; "preview_url": string; "inputs_summary": InputsSummary; "input_schema": Record<string, unknown>; "asset_paths": Array<Array<string>>; "output": OutputOptions; "examples": Array<RecipeExample>; "docs": Record<string, string>; };
 export type RecipeRef = { "id": string; "version"?: number; };
@@ -31,6 +32,7 @@ export type OperationResponses = {
   "verifyEmailCode": AccountKey;
   "listRecipes": RecipeList;
   "getRecipe": RecipeDetail;
+  "listFonts": FontList;
   "uploadAsset": Asset;
   "analyzeAsset": AssetAnalysis;
   "renderRecipe": Render;

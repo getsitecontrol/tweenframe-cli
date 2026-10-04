@@ -3,7 +3,7 @@
   "info": {
     "title": "TweenFrame Public API",
     "version": "0.2.0",
-    "description": "Render curated catalog recipes into animated GIF, WebP, APNG, MP4, WebM or still images.\n\nFlow: create an anonymous identity (POST /identity), pick a recipe (GET /recipes), read its input_schema and examples (GET /recipes/{id}), upload local images as assets (POST /assets), post a render (POST /renders) and poll it until it completes (GET /renders/{jobKey}).\n\nAnonymous renders are up to 1000 px wide; a wider one answers 403 registration_required. Verify the user's email (POST /auth/email/start, then POST /auth/email/verify), which is free, and repeat the same request with the account key it returns.\n\nEvery error is `{error: {code, message, details?, hint, docs}}`: `hint` says what to do next and `docs` links the code's section in the errors guide.\n\nGuides (origin-relative, plain Markdown): skill /docs/agent/SKILL.md, recipes /docs/agent/recipes.md, output /docs/agent/output.md, assets /docs/agent/assets.md, errors /docs/agent/errors.md, HTTP API /docs/agent/api.md; index /docs/agent/index.json.",
+    "description": "Render curated catalog recipes into animated GIF, WebP, APNG, MP4, WebM or still images.\n\nFlow: create an anonymous identity (POST /identity), pick a recipe (GET /recipes), read its input_schema and examples (GET /recipes/{id}), upload local images as assets (POST /assets), post a render (POST /renders) and poll it until it completes (GET /renders/{jobKey}).\n\nEvery error is `{error: {code, message, details?, hint, docs}}`: `hint` says what to do next and `docs` links the code's section in the errors guide.\n\nGuides (origin-relative, plain Markdown): skill /docs/agent/SKILL.md, recipes /docs/agent/recipes.md, output /docs/agent/output.md, assets /docs/agent/assets.md, errors /docs/agent/errors.md, HTTP API /docs/agent/api.md; index /docs/agent/index.json.",
     "x-cli": {
       "description": "Render TweenFrame catalog recipes (animated GIF, WebP, video) from the command line. Results print as one JSON document on stdout, errors as one on stderr with a hint and a docs link.",
       "docs": "/docs/agent/SKILL.md",
@@ -25,7 +25,7 @@
     },
     {
       "name": "recipes",
-      "description": "Catalog of public recipes: list them, read one's inputs and examples, render it.",
+      "description": "Catalog of public recipes: list them, read one's inputs and examples, render it; list the fonts text inputs take.",
       "externalDocs": {
         "url": "/docs/agent/recipes.md"
       }
@@ -125,7 +125,7 @@
         }
       },
       "422": {
-        "description": "Request, inputs or output options rejected (invalid_request, invalid_recipe_inputs, invalid_output, …); details.path points at the offending value",
+        "description": "Request, inputs or output options rejected (invalid_request, invalid_recipe_inputs, invalid_output, unknown_font, …); details.path points at the offending value",
         "content": {
           "application/json": {
             "schema": {
@@ -165,7 +165,7 @@
         }
       },
       "503": {
-        "description": "Email cannot be sent (email_delivery_unavailable)",
+        "description": "Email cannot be sent (email_delivery_unavailable), or a font cannot be fetched right now (font_unavailable, with Retry-After)",
         "content": {
           "application/json": {
             "schema": {
@@ -812,6 +812,51 @@
           "docs"
         ]
       },
+      "FontList": {
+        "type": "object",
+        "properties": {
+          "groups": {
+            "type": "array",
+            "description": "Font families grouped by style.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Group id."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Group name."
+                },
+                "fonts": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Family names, usable as a Typography `font` as written."
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "fonts"
+              ]
+            }
+          },
+          "docs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "`guide`: how recipes work, including Typography."
+          }
+        },
+        "required": [
+          "groups",
+          "docs"
+        ]
+      },
       "RecipeExample": {
         "type": "object",
         "properties": {
@@ -1451,6 +1496,45 @@
         }
       }
     },
+    "/fonts": {
+      "get": {
+        "operationId": "listFonts",
+        "tags": [
+          "recipes"
+        ],
+        "summary": "List the fonts of the TweenFrame set",
+        "description": "Lists the font families of TweenFrame's own set, grouped by style. A Typography `font` input takes a name from here, or any Google Fonts family by its exact name; bold is `<Family> Bold`. A name that is neither is 422 unknown_font on render. No token needed.",
+        "x-cli": {
+          "command": "fonts list",
+          "mode": "request",
+          "examples": [
+            "tweenframe fonts list"
+          ],
+          "docs": "/docs/agent/recipes.md"
+        },
+        "responses": {
+          "200": {
+            "description": "Font groups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FontList"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "502": {
+            "$ref": "#/components/responses/502"
+          },
+          "504": {
+            "$ref": "#/components/responses/504"
+          }
+        }
+      }
+    },
     "/assets": {
       "post": {
         "operationId": "uploadAsset",
@@ -1678,7 +1762,7 @@
             "$ref": "#/components/responses/401"
           },
           "403": {
-            "description": "The token may not use an asset (asset_forbidden), or an anonymous token asks for output wider than 1000 px (registration_required)",
+            "description": "The token may not use an asset (asset_forbidden), or the request needs an account (registration_required)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1692,11 +1776,9 @@
                         "code": "registration_required",
                         "message": "Rendering 1600 px wide needs an account. Verify your email and repeat the request.",
                         "details": {
-                          "limit": 1000,
-                          "actual": 1600,
                           "render_started": false
                         },
-                        "hint": "Ask the user for their email, run `auth email start`, then `auth email verify` with the received code, and repeat the same request; lower the width only if the user agrees.",
+                        "hint": "Ask the user for their email, run `auth email start`, then `auth email verify` with the received code, and repeat the same request; change the request only if the user agrees.",
                         "docs": "/docs/agent/errors.md#registration_required"
                       }
                     }
@@ -1728,6 +1810,9 @@
           },
           "502": {
             "$ref": "#/components/responses/502"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
           },
           "504": {
             "$ref": "#/components/responses/504"

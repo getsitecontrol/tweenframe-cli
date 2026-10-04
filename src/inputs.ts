@@ -5,6 +5,16 @@ import { CliError, type Json } from "./errors.js";
 
 type FileRef = { at: (string | number)[]; url: string; path: string };
 
+// Agents carry the file:// form over from image values; `file://work/x.json` is a relative path, not a host.
+function inputPath(arg: string): string {
+  if (!arg.startsWith("file:")) return arg;
+  try {
+    return fileURLToPath(arg);
+  } catch {
+    return arg.replace(/^file:\/\//, "");
+  }
+}
+
 export async function readInput(arg: string): Promise<Json> {
   let raw: string;
   try {
@@ -13,7 +23,7 @@ export async function readInput(arg: string): Promise<Json> {
       for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));
       raw = Buffer.concat(chunks).toString("utf8");
     } else if (/^\s*[[{]/.test(arg)) raw = arg;
-    else raw = await readFile(arg, "utf8");
+    else raw = await readFile(inputPath(arg), "utf8");
   } catch (error) {
     throw new CliError("input_read_failed", error instanceof Error ? error.message : String(error), { input: arg });
   }

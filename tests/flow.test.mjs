@@ -3,7 +3,7 @@ import { after, before, beforeEach, test } from "node:test";
 import { createServer } from "node:http";
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 
@@ -84,6 +84,7 @@ function handle(request, body) {
     return [200, { token: "account-key", kind: "account", email: "person@example.com", account_id: "acc_1", workspace_id: "ws_1" }];
   }
   if (route === "/recipes") return [200, { recipes: [{ id: detail.id, version: 1 }] }];
+  if (route === "/fonts") return [200, { groups: [{ id: "general", name: "General", fonts: ["Anton", "Roboto Bold"] }] }];
   if (route === "/recipes/real-estate/banner-7" && [null, "1"].includes(url.searchParams.get("version")))
     return [200, detail];
   if (route === "/recipes/text/loop") return [200, textDetail];
@@ -310,6 +311,10 @@ test("local validation happens before any network call", async () => {
   assert.equal((await fails([...render, "--input", "{}", "--loop", "yes"])).code, "invalid_value");
   assert.equal((await fails([...render, "--input", "{}", "--width", "5"])).code, "invalid_value");
   assert.equal((await fails([...render, "--input", "[1]"])).code, "invalid_json");
+  const file = join(directory, "array.json");
+  await writeFile(file, "[1]");
+  assert.equal((await fails([...render, "--input", pathToFileURL(file).href])).code, "invalid_json");
+  assert.equal((await fails([...render, "--input", `file://${relative(process.cwd(), file)}`])).code, "invalid_json");
   const missing = pathToFileURL(join(directory, "missing.png")).href;
   const error = await fails([...render, "--input", JSON.stringify({ photos: [{ src: missing }] })]);
   assert.equal(error.code, "file_not_found");
@@ -506,4 +511,11 @@ test("registration_required from a render passes through with hint and docs", as
   assert.deepEqual(error.details, { limit: 1000, actual: 1600, render_started: false });
   assert.equal(typeof error.hint, "string");
   assert.equal(error.docs, `${new URL(base).origin}/docs/agent/errors.md#registration_required`);
+});
+
+test("fonts list fetches the font groups", async () => {
+  calls = [];
+  const data = await ok("fonts", "list");
+  assert.deepEqual(data.groups[0].fonts, ["Anton", "Roboto Bold"]);
+  assert.equal(calls.at(-1).url, `${api}/fonts`);
 });
