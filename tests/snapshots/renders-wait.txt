@@ -1,0 +1,22 @@
+Usage: tweenframe renders wait --input <json|file|-> [options]
+
+Returns the current state of a render that answered `pending`: still pending, completed with
+`result_url`, or failed with an error. Poll the `poll_url` from the pending answer every second or
+two. With the CLI, `recipes render --wait` polls for you; `renders wait` resumes from a saved
+pending render JSON.
+
+The CLI polls the render every 1.5 s for up to 6 minutes; with --output it downloads the result.
+
+Options:
+  --input <json|file|->     Required. A render printed by `tweenframe recipes render`, bare or
+                            wrapped in {"data": ...}: inline JSON, a JSON file path, or - for stdin.
+  --output <file>           Download the result to this file; parent directories are created.
+  -h, --help                Show this help.
+
+Output: JSON on stdout as {"data": ...}. Errors as {"error": {code, message, hint, docs}} on stderr,
+        exit code 1.
+
+Examples:
+  tweenframe renders wait --input pending.json --output out/banner.gif
+
+Docs: https://api.test/docs/agent/recipes.md

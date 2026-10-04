@@ -1,0 +1,6 @@
+node_modules/
+dist/
+*.tgz
+docs/plans/
+evals/
+.claude/

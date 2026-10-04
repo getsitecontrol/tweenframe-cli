@@ -1,0 +1,24 @@
+Usage: tweenframe assets analyze <source> [options]
+
+Analyzes an uploaded or catalog image: `focal` (normalized 0..1; use [x, y] as a recipe `focus`
+value), `subject` (the box to keep in frame), `faces`, and for each requested aspect a cover crop in
+`crops`. Use it to choose focus points and a canvas aspect that suit the photo. The CLI uploads a
+local file first and returns the upload as `asset`.
+
+Arguments:
+  source                    Local image path, file:// URL, managed asset URL from `assets upload`,
+                            or a catalog asset path.
+
+Options:
+  --aspect <w:h>            Canvas aspects (width:height, each side 1-9999, e.g. 4:5) to suggest a
+                            cover crop for; at most 16. Repeat the flag for each aspect.
+  -h, --help                Show this help.
+
+Output: JSON on stdout as {"data": ...}. Errors as {"error": {code, message, hint, docs}} on stderr,
+        exit code 1.
+
+Examples:
+  tweenframe assets analyze ./photos/front.jpg
+  tweenframe assets analyze ./photos/front.jpg --aspect 4:5 --aspect 16:9
+
+Docs: https://api.test/docs/agent/assets.md

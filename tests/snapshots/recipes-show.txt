@@ -1,0 +1,25 @@
+Usage: tweenframe recipes show <id> [version]
+
+Returns what a render needs: `input_schema` (JSON Schema 2020-12; `required` lists the inputs
+without a default, usually the user's own data), `asset_paths` (where images go), the default
+`output` options and named `examples` (complete inputs objects, at least `minimal` and `full`).
+Start from an example and change only what the user asked for. No token needed.
+
+Arguments:
+  id                        Recipe id from `recipes list`, e.g. real-estate/banner-7; append
+                            @<version> to pin a version.
+  version                   Recipe version; omit for the catalog version. A version the catalog does
+                            not serve is 404 recipe_not_found. An integer of at least 1. Same as
+                            <id>@<version>.
+
+Options:
+  -h, --help                Show this help.
+
+Output: JSON on stdout as {"data": ...}. Errors as {"error": {code, message, hint, docs}} on stderr,
+        exit code 1.
+
+Examples:
+  tweenframe recipes show real-estate/banner-7
+  tweenframe recipes show real-estate/banner-7@1
+
+Docs: https://api.test/docs/agent/recipes.md

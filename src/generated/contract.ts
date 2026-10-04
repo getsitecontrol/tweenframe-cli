@@ -1,0 +1,1174 @@
+// Generated from openapi/tweenframe.json (sha256 ed953f610400). Do not edit.
+export const meta = {
+  "title": "TweenFrame Public API",
+  "description": "Render TweenFrame catalog recipes (animated GIF, WebP, video) from the command line. Results print as one JSON document on stdout, errors as one on stderr with a hint and a docs link.",
+  "docs": {
+    "skill": "/docs/agent/SKILL.md",
+    "index": "/docs/agent/index.json"
+  },
+  "groups": [
+    {
+      "name": "auth",
+      "description": "Anonymous bearer identity: create a token once and reuse it for a year.",
+      "docs": "/docs/agent/SKILL.md"
+    },
+    {
+      "name": "recipes",
+      "description": "Catalog of public recipes: list them, read one's inputs and examples, render it.",
+      "docs": "/docs/agent/recipes.md"
+    },
+    {
+      "name": "assets",
+      "description": "Images for recipe inputs: upload, then analyze for a focal point and crops.",
+      "docs": "/docs/agent/assets.md"
+    },
+    {
+      "name": "renders",
+      "description": "Render jobs: resume polling a render that is still pending.",
+      "docs": "/docs/agent/recipes.md"
+    }
+  ]
+} as const;
+
+export const operations = [
+  {
+    "operationId": "createAnonymousIdentity",
+    "command": "auth init",
+    "mode": "store-identity",
+    "summary": "Create an anonymous identity and its bearer token",
+    "description": "Issues an anonymous identity and a bearer token valid for one year. Every call except the catalog needs the token as `Authorization: Bearer <token>`. Assets uploaded with a token are usable only with that token. The CLI stores the token in its auth file (`auth status` shows it); create a new one only when it is missing or expired.",
+    "examples": [
+      "tweenframe auth init"
+    ],
+    "docs": "/docs/agent/SKILL.md",
+    "arguments": {},
+    "method": "POST",
+    "path": "/identity",
+    "authenticated": false,
+    "positionals": [],
+    "parameters": [],
+    "contentType": null,
+    "bodySchema": null,
+    "responseSchema": {
+      "$ref": "#/components/schemas/AnonymousIdentity"
+    }
+  },
+  {
+    "operationId": "listRecipes",
+    "command": "recipes list",
+    "mode": "request",
+    "summary": "List public recipes",
+    "description": "Lists every published recipe with its id, catalog version, title, description, tags, preview image and `inputs_summary` (required inputs, image slots and field counts). Pick a recipe here, then read its full inputs with `recipes show`. No token needed.",
+    "examples": [
+      "tweenframe recipes list"
+    ],
+    "docs": "/docs/agent/recipes.md",
+    "arguments": {},
+    "method": "GET",
+    "path": "/recipes",
+    "authenticated": false,
+    "positionals": [],
+    "parameters": [],
+    "contentType": null,
+    "bodySchema": null,
+    "responseSchema": {
+      "$ref": "#/components/schemas/RecipeList"
+    }
+  },
+  {
+    "operationId": "getRecipe",
+    "command": "recipes show",
+    "mode": "request",
+    "summary": "Show a recipe: input schema, asset paths, output defaults and examples",
+    "description": "Returns what a render needs: `input_schema` (JSON Schema 2020-12; `required` lists the inputs without a default, usually the user's own data), `asset_paths` (where images go), the default `output` options and named `examples` (complete inputs objects, at least `minimal` and `full`). Start from an example and change only what the user asked for. No token needed.",
+    "examples": [
+      "tweenframe recipes show real-estate/banner-7",
+      "tweenframe recipes show real-estate/banner-7@1"
+    ],
+    "docs": "/docs/agent/recipes.md",
+    "arguments": {
+      "id": "Recipe id from `recipes list`, e.g. real-estate/banner-7; append @<version> to pin a version."
+    },
+    "method": "GET",
+    "path": "/recipes/{id}",
+    "authenticated": false,
+    "positionals": [
+      "id"
+    ],
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Recipe id, e.g. real-estate/banner-7; the CLI also accepts <id>@<version>."
+      },
+      {
+        "name": "version",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": "Recipe version; omit for the catalog version. A version the catalog does not serve is 404 recipe_not_found."
+      }
+    ],
+    "contentType": null,
+    "bodySchema": null,
+    "responseSchema": {
+      "$ref": "#/components/schemas/RecipeDetail"
+    }
+  },
+  {
+    "operationId": "uploadAsset",
+    "command": "assets upload",
+    "mode": "upload",
+    "summary": "Upload one image (JPEG, PNG, WebP or GIF, up to 25 MB)",
+    "description": "Stores one image and returns its managed `url`, `width` and `height`. Put the URL into recipe inputs at a path from `asset_paths`. With the CLI you rarely need this: a `file:///absolute/path` value at an asset path is uploaded during `recipes render`. Identical bytes return the same asset.",
+    "examples": [
+      "tweenframe assets upload ./photos/front.jpg"
+    ],
+    "docs": "/docs/agent/assets.md",
+    "arguments": {
+      "file": "Local image file: JPEG, PNG, WebP or GIF, at most 25 MB."
+    },
+    "method": "POST",
+    "path": "/assets",
+    "authenticated": true,
+    "positionals": [
+      "file"
+    ],
+    "parameters": [],
+    "contentType": "multipart/form-data",
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string",
+          "format": "binary",
+          "description": "The image bytes: JPEG, PNG, WebP or GIF, at most 25 MB."
+        }
+      },
+      "required": [
+        "file"
+      ]
+    },
+    "responseSchema": {
+      "$ref": "#/components/schemas/Asset"
+    }
+  },
+  {
+    "operationId": "analyzeAsset",
+    "command": "assets analyze",
+    "mode": "analyze",
+    "summary": "Find the focal point, subject box and a cover crop per aspect of an image",
+    "description": "Analyzes an uploaded or catalog image: `focal` (normalized 0..1; use [x, y] as a recipe `focus` value), `subject` (the box to keep in frame), `faces`, and for each requested aspect a cover crop in `crops`. Use it to choose focus points and a canvas aspect that suit the photo. The CLI uploads a local file first and returns the upload as `asset`.",
+    "examples": [
+      "tweenframe assets analyze ./photos/front.jpg",
+      "tweenframe assets analyze ./photos/front.jpg --aspect 4:5 --aspect 16:9"
+    ],
+    "docs": "/docs/agent/assets.md",
+    "arguments": {
+      "source": "Local image path, file:// URL, managed asset URL from `assets upload`, or a catalog asset path."
+    },
+    "method": "POST",
+    "path": "/assets/analyze",
+    "authenticated": true,
+    "positionals": [
+      "source"
+    ],
+    "parameters": [],
+    "contentType": "application/json",
+    "bodySchema": {
+      "$ref": "#/components/schemas/AnalyzeRequest"
+    },
+    "responseSchema": {
+      "$ref": "#/components/schemas/AssetAnalysis"
+    }
+  },
+  {
+    "operationId": "renderRecipe",
+    "command": "recipes render",
+    "mode": "render",
+    "summary": "Render a recipe",
+    "description": "Renders a recipe with your inputs and output options. Inputs are checked against the recipe's `input_schema` and output options against OutputOptions; a rejected value is a 422 whose `details.path` points at it. The answer is a completed render with `result_url`, or a pending job to poll with `poll_url` (the CLI's `--wait` polls and `--output` downloads). Output options are not inputs: with the CLI they are flags of this command.",
+    "examples": [
+      "tweenframe recipes render real-estate/banner-7 --input inputs.json --wait --output out/banner.gif",
+      "tweenframe recipes render before-after/default --input inputs.json --format mp4 --wait --output out/compare.mp4",
+      "tweenframe recipes render animated-text/loop --input - --format webp --width 600 --wait --output out/title.webp < inputs.json"
+    ],
+    "docs": "/docs/agent/recipes.md",
+    "arguments": {
+      "recipe": "Recipe id from `recipes list`; append @<version> only to pin a version."
+    },
+    "method": "POST",
+    "path": "/renders",
+    "authenticated": true,
+    "positionals": [
+      "recipe"
+    ],
+    "parameters": [],
+    "contentType": "application/json",
+    "bodySchema": {
+      "$ref": "#/components/schemas/RenderRequest"
+    },
+    "responseSchema": {
+      "$ref": "#/components/schemas/Render"
+    }
+  },
+  {
+    "operationId": "getRender",
+    "command": "renders wait",
+    "mode": "wait",
+    "summary": "Poll a pending render",
+    "description": "Returns the current state of a render that answered `pending`: still pending, completed with `result_url`, or failed with an error. Poll the `poll_url` from the pending answer every second or two. With the CLI, `recipes render --wait` polls for you; `renders wait` resumes from a saved pending render JSON.",
+    "examples": [
+      "tweenframe renders wait --input pending.json --output out/banner.gif"
+    ],
+    "docs": "/docs/agent/recipes.md",
+    "arguments": {},
+    "method": "GET",
+    "path": "/renders/{jobKey}",
+    "authenticated": true,
+    "positionals": [],
+    "parameters": [
+      {
+        "name": "jobKey",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "The `uid` of the pending render."
+      },
+      {
+        "name": "t",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "poll_token from the pending render."
+      }
+    ],
+    "contentType": null,
+    "bodySchema": null,
+    "responseSchema": {
+      "$ref": "#/components/schemas/Render"
+    }
+  }
+] as const;
+
+export const outputOptions = {
+  "format": {
+    "type": "string",
+    "enum": [
+      "gif",
+      "webp",
+      "apng",
+      "mp4",
+      "webm",
+      "png",
+      "jpeg",
+      "svg",
+      "pdf"
+    ],
+    "description": "File format. Animated: gif, webp, apng, mp4, webm; still (first frame): png, jpeg, svg, pdf."
+  },
+  "quality": {
+    "type": "string",
+    "enum": [
+      "maximum",
+      "normal",
+      "minimal"
+    ],
+    "description": "Encoder quality preset; lower quality gives a smaller file. Not for svg or pdf."
+  },
+  "width": {
+    "type": "integer",
+    "minimum": 16,
+    "maximum": 3000,
+    "description": "Output width in pixels; height follows the canvas aspect. Rescales the rendered canvas, so one inputs object serves every size."
+  },
+  "scale": {
+    "type": "number",
+    "exclusiveMinimum": 0,
+    "description": "Multiplier of the canvas size; when set, width is ignored. Not for svg or pdf."
+  },
+  "fps": {
+    "type": "number",
+    "minimum": 0,
+    "maximum": 30,
+    "description": "Frames per second, 0-30; 0 keeps the recipe's authored frame rate. Animated formats only. A GIF keeps per-frame delays, so its effective rate can be lower."
+  },
+  "loop": {
+    "type": "boolean",
+    "description": "Whether the result repeats forever (true) or plays once; gif, webp and apng only."
+  }
+} as const;
+
+export const schemas = {
+  "ErrorBody": {
+    "type": "object",
+    "properties": {
+      "code": {
+        "type": "string",
+        "description": "Stable machine-readable error code; errors.md has a section per code."
+      },
+      "message": {
+        "type": "string",
+        "description": "What went wrong, for a human or an agent."
+      },
+      "details": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Extra context; `path` names the offending value as a list of keys and indexes."
+      },
+      "hint": {
+        "type": "string",
+        "description": "One sentence: what to do next."
+      },
+      "docs": {
+        "type": "string",
+        "description": "Origin-relative URL of this code's section in errors.md."
+      },
+      "reference": {
+        "type": "string",
+        "description": "Recipe detail URL (GET /recipes/{id}) whose input_schema the invalid input breaks."
+      },
+      "output_reference": {
+        "type": "string",
+        "description": "URL of the OutputOptions schema, on 422 from POST /renders."
+      }
+    },
+    "required": [
+      "code",
+      "message",
+      "hint",
+      "docs"
+    ]
+  },
+  "Error": {
+    "type": "object",
+    "properties": {
+      "error": {
+        "$ref": "#/components/schemas/ErrorBody"
+      }
+    },
+    "required": [
+      "error"
+    ]
+  },
+  "AnonymousIdentity": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Public subject id of the identity."
+      },
+      "token": {
+        "type": "string",
+        "description": "Bearer token for authenticated calls. Keep it secret."
+      },
+      "expires_at": {
+        "type": "string",
+        "format": "date-time",
+        "description": "When the token stops working (one year after creation)."
+      },
+      "docs": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "Guides to read next: `skill` and `api`."
+      }
+    },
+    "required": [
+      "id",
+      "token",
+      "expires_at"
+    ]
+  },
+  "Asset": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Asset id."
+      },
+      "url": {
+        "type": "string",
+        "description": "Managed asset URL; put it into recipe inputs at an asset path. Usable only with the token that uploaded it."
+      },
+      "sha256": {
+        "type": "string",
+        "description": "SHA-256 of the stored bytes."
+      },
+      "ext": {
+        "type": "string",
+        "description": "File extension: jpg, png, webp or gif."
+      },
+      "content_type": {
+        "type": "string",
+        "description": "MIME type of the stored file."
+      },
+      "width": {
+        "type": "integer",
+        "description": "Width in pixels."
+      },
+      "height": {
+        "type": "integer",
+        "description": "Height in pixels."
+      },
+      "byte_size": {
+        "type": "integer",
+        "description": "Stored size in bytes."
+      },
+      "catalog": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Always null for uploads."
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Always empty for uploads."
+      },
+      "created_at": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "date-time"
+      },
+      "docs": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "Guide to read next: `guide` (assets)."
+      }
+    },
+    "required": [
+      "id",
+      "url",
+      "sha256",
+      "ext",
+      "content_type",
+      "width",
+      "height",
+      "byte_size"
+    ]
+  },
+  "AnalyzeRequest": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "Managed asset URL from POST /assets, or a catalog asset path (/template-catalog/assets/…) from a recipe example."
+      },
+      "aspects": {
+        "type": "array",
+        "maxItems": 16,
+        "items": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,3}:[1-9][0-9]{0,3}$"
+        },
+        "description": "Canvas aspects (width:height, each side 1-9999, e.g. 4:5) to suggest a cover crop for; at most 16."
+      }
+    },
+    "required": [
+      "url"
+    ],
+    "additionalProperties": false
+  },
+  "AnalysisPoint": {
+    "type": "object",
+    "description": "A point normalized 0..1 against the oriented image.",
+    "properties": {
+      "x": {
+        "type": "number"
+      },
+      "y": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "x",
+      "y"
+    ]
+  },
+  "AnalysisCrop": {
+    "type": "object",
+    "description": "The cover crop for one aspect, normalized 0..1.",
+    "properties": {
+      "x": {
+        "type": "number"
+      },
+      "y": {
+        "type": "number"
+      },
+      "w": {
+        "type": "number"
+      },
+      "h": {
+        "type": "number"
+      },
+      "object_position": {
+        "$ref": "#/components/schemas/AnalysisPoint"
+      }
+    },
+    "required": [
+      "x",
+      "y",
+      "w",
+      "h",
+      "object_position"
+    ]
+  },
+  "AnalysisFace": {
+    "type": "object",
+    "properties": {
+      "x": {
+        "type": "number"
+      },
+      "y": {
+        "type": "number"
+      },
+      "w": {
+        "type": "number"
+      },
+      "h": {
+        "type": "number"
+      },
+      "score": {
+        "type": "number"
+      },
+      "primary": {
+        "type": "boolean",
+        "description": "Part of the set that steered the focal point."
+      }
+    },
+    "required": [
+      "x",
+      "y",
+      "w",
+      "h",
+      "score",
+      "primary"
+    ]
+  },
+  "AssetAnalysis": {
+    "type": "object",
+    "properties": {
+      "contract_version": {
+        "type": "integer"
+      },
+      "model_version": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        }
+      },
+      "image": {
+        "type": "object",
+        "description": "Oriented original size in pixels.",
+        "properties": {
+          "width": {
+            "type": "integer"
+          },
+          "height": {
+            "type": "integer"
+          },
+          "orientation_applied": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "width",
+          "height",
+          "orientation_applied"
+        ]
+      },
+      "focal": {
+        "type": "object",
+        "description": "Focal point normalized 0..1; use [x, y] as a recipe `focus` value. source: face, saliency or center (nothing found).",
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "face",
+              "saliency",
+              "center"
+            ]
+          },
+          "confidence": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "source",
+          "confidence"
+        ]
+      },
+      "subject": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "description": "Region to keep in frame; null when focal.source is center.",
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "w": {
+            "type": "number"
+          },
+          "h": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ]
+      },
+      "object_position": {
+        "$ref": "#/components/schemas/AnalysisPoint"
+      },
+      "faces": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/AnalysisFace"
+        }
+      },
+      "crops": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/components/schemas/AnalysisCrop"
+        },
+        "description": "Suggested cover crop per requested aspect, keyed as requested (e.g. 4:5)."
+      },
+      "warnings": {
+        "type": "array",
+        "description": "Non-fatal notes about the analysis, e.g. a low-confidence result.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      },
+      "docs": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "Guide to read next: `guide` (assets)."
+      }
+    },
+    "required": [
+      "contract_version",
+      "model_version",
+      "image",
+      "focal",
+      "subject",
+      "object_position",
+      "faces",
+      "crops",
+      "warnings"
+    ]
+  },
+  "RecipeSummary": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Recipe id, e.g. real-estate/banner-7."
+      },
+      "version": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "Catalog version; renders use it unless you pin another."
+      },
+      "title": {
+        "type": "string",
+        "description": "Short human title."
+      },
+      "description": {
+        "type": "string",
+        "description": "What this recipe makes."
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Search tags."
+      },
+      "preview_url": {
+        "type": "string",
+        "format": "uri-reference",
+        "description": "Still preview image, a path on the API origin."
+      },
+      "inputs_summary": {
+        "$ref": "#/components/schemas/InputsSummary"
+      }
+    },
+    "required": [
+      "id",
+      "version",
+      "title",
+      "description",
+      "tags",
+      "preview_url",
+      "inputs_summary"
+    ]
+  },
+  "InputsSummary": {
+    "type": "object",
+    "description": "What a caller must bring, at a glance; GET /recipes/{id} has the full schema.",
+    "properties": {
+      "required": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Top-level inputs without a default. For most recipes these are the user's own data."
+      },
+      "assets": {
+        "type": "array",
+        "description": "Image inputs: where they go and how many.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Path inside inputs as in asset_paths; '*' = every list item."
+            },
+            "min": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Fewest images to send."
+            },
+            "max": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "description": "Most images accepted; null = no limit."
+            }
+          },
+          "required": [
+            "path",
+            "min",
+            "max"
+          ]
+        }
+      },
+      "texts": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Text fields (a field inside list items counts once)."
+      },
+      "colors": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Color and fill fields."
+      },
+      "lists": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "List inputs."
+      }
+    },
+    "required": [
+      "required",
+      "assets",
+      "texts",
+      "colors",
+      "lists"
+    ]
+  },
+  "RecipeList": {
+    "type": "object",
+    "properties": {
+      "recipes": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/RecipeSummary"
+        }
+      },
+      "docs": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "`guide`: how recipes work."
+      }
+    },
+    "required": [
+      "recipes",
+      "docs"
+    ]
+  },
+  "RecipeExample": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Every recipe has `minimal` (required inputs only) and `full` (every input set)."
+      },
+      "description": {
+        "type": "string",
+        "description": "What this example renders."
+      },
+      "inputs": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "A complete inputs object accepted by POST /renders as is."
+      }
+    },
+    "required": [
+      "name",
+      "inputs"
+    ]
+  },
+  "RecipeDetail": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Recipe id."
+      },
+      "version": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "The version described."
+      },
+      "title": {
+        "type": "string",
+        "description": "Short human title."
+      },
+      "description": {
+        "type": "string",
+        "description": "What this recipe makes."
+      },
+      "tags": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Search tags."
+      },
+      "preview_url": {
+        "type": "string",
+        "format": "uri-reference",
+        "description": "Still preview image, a path on the API origin."
+      },
+      "inputs_summary": {
+        "$ref": "#/components/schemas/InputsSummary"
+      },
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "JSON Schema 2020-12 of the inputs object. Inputs listed in `required` have no default; every other input has one, so omit what you do not change."
+      },
+      "asset_paths": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description": "Paths to asset values inside inputs; '*' matches every list item. The CLI uploads file:// values found at these paths."
+      },
+      "output": {
+        "$ref": "#/components/schemas/OutputOptions"
+      },
+      "examples": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/RecipeExample"
+        },
+        "description": "Complete inputs objects; start from one and change what the user asked."
+      },
+      "docs": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "`guide`: how recipes work; `errors`: troubleshooting."
+      }
+    },
+    "required": [
+      "id",
+      "version",
+      "title",
+      "description",
+      "tags",
+      "preview_url",
+      "inputs_summary",
+      "input_schema",
+      "asset_paths",
+      "output",
+      "examples",
+      "docs"
+    ]
+  },
+  "RecipeRef": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "Recipe id from GET /recipes."
+      },
+      "version": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "Omit for the catalog version; a version the catalog does not serve is 404 recipe_not_found."
+      }
+    },
+    "required": [
+      "id"
+    ],
+    "additionalProperties": false
+  },
+  "OutputOptions": {
+    "type": "object",
+    "description": "How to encode the result, separate from the recipe inputs. Every option is optional on a render; an omitted one keeps the recipe's default (`output` of GET /recipes/{id}). An option the format does not take is a 422 invalid_output: loop only for gif, webp, apng; fps only for animated formats; svg and pdf take no other option.",
+    "properties": {
+      "format": {
+        "type": "string",
+        "enum": [
+          "gif",
+          "webp",
+          "apng",
+          "mp4",
+          "webm",
+          "png",
+          "jpeg",
+          "svg",
+          "pdf"
+        ],
+        "description": "File format. Animated: gif, webp, apng, mp4, webm; still (first frame): png, jpeg, svg, pdf."
+      },
+      "quality": {
+        "type": "string",
+        "enum": [
+          "maximum",
+          "normal",
+          "minimal"
+        ],
+        "description": "Encoder quality preset; lower quality gives a smaller file. Not for svg or pdf."
+      },
+      "width": {
+        "type": "integer",
+        "minimum": 16,
+        "maximum": 3000,
+        "description": "Output width in pixels; height follows the canvas aspect. Rescales the rendered canvas, so one inputs object serves every size."
+      },
+      "scale": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "description": "Multiplier of the canvas size; when set, width is ignored. Not for svg or pdf."
+      },
+      "fps": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 30,
+        "description": "Frames per second, 0-30; 0 keeps the recipe's authored frame rate. Animated formats only. A GIF keeps per-frame delays, so its effective rate can be lower."
+      },
+      "loop": {
+        "type": "boolean",
+        "description": "Whether the result repeats forever (true) or plays once; gif, webp and apng only."
+      }
+    },
+    "additionalProperties": false
+  },
+  "RenderRequest": {
+    "type": "object",
+    "properties": {
+      "recipe": {
+        "$ref": "#/components/schemas/RecipeRef"
+      },
+      "inputs": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Values matching the recipe input_schema. Asset values are URLs from POST /assets or catalog asset paths; the CLI also takes file:// URLs and uploads them."
+      },
+      "output": {
+        "$ref": "#/components/schemas/OutputOptions"
+      }
+    },
+    "required": [
+      "recipe",
+      "inputs"
+    ],
+    "additionalProperties": false
+  },
+  "RenderCompleted": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "completed"
+        ]
+      },
+      "uid": {
+        "type": "string",
+        "description": "Render id; quote it when reporting a problem."
+      },
+      "result_url": {
+        "type": "string",
+        "description": "Downloadable result, absolute or relative to the API origin."
+      },
+      "format": {
+        "type": "string",
+        "description": "Format of the result file."
+      },
+      "stats": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Render statistics when available (size, frames, nominal fps); measure the file for exact values."
+      },
+      "recipe": {
+        "type": "object",
+        "description": "The recipe that was rendered; hash identifies its exact document.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "hash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "hash"
+        ]
+      }
+    },
+    "required": [
+      "status",
+      "uid",
+      "result_url",
+      "format"
+    ]
+  },
+  "RenderPending": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "pending"
+        ]
+      },
+      "uid": {
+        "type": "string",
+        "description": "Job key."
+      },
+      "poll_url": {
+        "type": "string",
+        "description": "GET /renders/{jobKey}?t=… to poll, relative to the API origin."
+      },
+      "poll_token": {
+        "type": "string",
+        "description": "The `t` query value of poll_url."
+      }
+    },
+    "required": [
+      "status",
+      "uid",
+      "poll_url",
+      "poll_token"
+    ]
+  },
+  "RenderFailed": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "failed"
+        ]
+      },
+      "uid": {
+        "type": "string",
+        "description": "Render id."
+      },
+      "error": {
+        "$ref": "#/components/schemas/ErrorBody"
+      }
+    },
+    "required": [
+      "status",
+      "uid",
+      "error"
+    ]
+  },
+  "Render": {
+    "oneOf": [
+      {
+        "$ref": "#/components/schemas/RenderCompleted"
+      },
+      {
+        "$ref": "#/components/schemas/RenderPending"
+      },
+      {
+        "$ref": "#/components/schemas/RenderFailed"
+      }
+    ],
+    "discriminator": {
+      "propertyName": "status",
+      "mapping": {
+        "completed": "#/components/schemas/RenderCompleted",
+        "pending": "#/components/schemas/RenderPending",
+        "failed": "#/components/schemas/RenderFailed"
+      }
+    }
+  }
+} as const;
+
+export type OperationId = typeof operations[number]["operationId"];

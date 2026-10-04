@@ -1,0 +1,14 @@
+Usage: tweenframe recipes <command> [arguments] [options]
+
+Catalog of public recipes: list them, read one's inputs and examples, render it.
+
+Commands:
+  list                          List public recipes
+  show <id> [version]           Show a recipe: input schema, asset paths, output defaults and
+                                examples
+  render <recipe> --input <json|file|->
+                                Render a recipe
+
+Run `tweenframe recipes <command> --help` for arguments, options, allowed values and examples.
+
+Docs: https://api.test/docs/agent/recipes.md

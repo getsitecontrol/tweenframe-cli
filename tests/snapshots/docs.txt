@@ -1,0 +1,22 @@
+Usage: tweenframe docs [name] [options]
+
+Without a name, lists the guides served by the TweenFrame site: name, one line, URL. With a name,
+fetches that guide and prints its Markdown verbatim, so it can be read without leaving the terminal.
+The list comes from the site the API runs on (TWEENFRAME_API_URL), not from the CLI.
+
+Arguments:
+  name                      Guide name from the list, e.g. recipes or errors.
+
+Options:
+  --json                    Print the guide list as {"data": {"guides": [...]}} instead of text.
+  -h, --help                Show this help.
+
+Output: Text on stdout: the guide list or the guide's Markdown. Errors as JSON on stderr, exit code
+        1.
+
+Examples:
+  tweenframe docs
+  tweenframe docs recipes
+  tweenframe docs errors
+
+Docs: https://api.test/docs/agent/index.json

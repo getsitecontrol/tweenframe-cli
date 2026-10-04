@@ -1,0 +1,44 @@
+tweenframe 0.1.0: Render TweenFrame catalog recipes (animated GIF, WebP, video) from the command
+line. Results print as one JSON document on stdout, errors as one on stderr with a hint and a docs
+link.
+
+Usage: tweenframe <group> <command> [arguments] [options]
+Workflow: auth init, recipes list, recipes show <id>, recipes render <id> --input <json> --output <file>
+
+Commands:
+  auth                              Anonymous bearer identity: create a token once and reuse it for
+                                    a year.
+    auth init                       Create an anonymous identity and its bearer token
+    auth status                     Show whether a usable identity is configured
+  recipes                           Catalog of public recipes: list them, read one's inputs and
+                                    examples, render it.
+    recipes list                    List public recipes
+    recipes show <id> [version]     Show a recipe: input schema, asset paths, output defaults and
+                                    examples
+    recipes render <recipe> --input <json|file|->
+                                    Render a recipe
+  assets                            Images for recipe inputs: upload, then analyze for a focal point
+                                    and crops.
+    assets upload <file>            Upload one image (JPEG, PNG, WebP or GIF, up to 25 MB)
+    assets analyze <source>         Find the focal point, subject box and a cover crop per aspect of
+                                    an image
+  renders                           Render jobs: resume polling a render that is still pending.
+    renders wait --input <json|file|->
+                                    Poll a pending render
+  docs [name] [--json]              List the agent guides or print one
+  help [command...] [--json]        Show help for the CLI, a group or a command
+
+Run `tweenframe <group>` for a group and `tweenframe <group> <command> --help` for arguments,
+options, allowed values and examples. `tweenframe docs` lists the guides.
+
+Output:
+  JSON on stdout            {"data": ...}
+  errors on stderr          {"error": {code, message, hint, docs}}, exit code 1
+
+Environment:
+  TWEENFRAME_API_URL        API base URL; now https://api.test/api/public/v1
+  TWEENFRAME_TOKEN          Bearer token; overrides the stored identity
+  TWEENFRAME_AUTH_FILE      Where `auth init` stores the identity
+
+Docs: https://api.test/docs/agent/SKILL.md
+Errors: https://api.test/docs/agent/errors.md
