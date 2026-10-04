@@ -20,7 +20,7 @@ export function allowed(schema: Schema): string {
   return "a string";
 }
 
-// Placeholder shown after a flag: `<16..3000>`, `<maximum|normal|minimal>`, `<number>`.
+// Placeholder shown after a flag: `<16..4000>`, `<maximum|normal|minimal>`, `<number>`.
 export function placeholder(schema: Schema): string {
   if (schema.enum) return `<${schema.enum.join("|")}>`;
   if (schema.type === "boolean") return "<true|false>";

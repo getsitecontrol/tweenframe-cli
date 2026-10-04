@@ -1,4 +1,4 @@
-// Generated from openapi/tweenframe.json (sha256 0b2326bd1640). Do not edit.
+// Generated from openapi/tweenframe.json (sha256 298601d4be38). Do not edit.
 export type ErrorBody = { "code": string; "message": string; "details"?: Record<string, unknown>; "hint": string; "docs": string; "reference"?: string; "output_reference"?: string; };
 export type Error = { "error": ErrorBody; };
 export type AnonymousIdentity = { "id": string; "token": string; "expires_at": string; "docs"?: Record<string, string>; };

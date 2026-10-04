@@ -48,7 +48,7 @@ test("help entry points agree", async () => {
 
 test("command help names types, ranges, allowed values and a docs link", async () => {
   const { stdout } = await cli("recipes", "render", "--help");
-  assert.match(stdout, /--width <16\.\.3000> +[^]*?integer\s+from\s+16\s+to\s+3000/);
+  assert.match(stdout, /--width <16\.\.4000> +[^]*?integer\s+from\s+16\s+to\s+4000/);
   assert.match(stdout, /--quality <maximum\|normal\|minimal>/);
   assert.match(stdout, /--fps <0\.\.30> +[^]*?0 keeps the recipe.s authored frame rate/);
   assert.match(stdout, /--input <json\|file\|->/);

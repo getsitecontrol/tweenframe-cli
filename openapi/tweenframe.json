@@ -870,7 +870,7 @@
           "width": {
             "type": "integer",
             "minimum": 16,
-            "maximum": 3000,
+            "maximum": 4000,
             "description": "Output width in pixels; height follows the canvas aspect. Rescales the rendered canvas, so one inputs object serves every size."
           },
           "scale": {

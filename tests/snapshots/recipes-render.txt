@@ -27,9 +27,9 @@ Options:
   --quality <maximum|normal|minimal>
                             Encoder quality preset; lower quality gives a smaller file. Not for svg
                             or pdf. Default: the recipe's output.quality.
-  --width <16..3000>        Output width in pixels; height follows the canvas aspect. Rescales the
+  --width <16..4000>        Output width in pixels; height follows the canvas aspect. Rescales the
                             rendered canvas, so one inputs object serves every size. An integer from
-                            16 to 3000. Default: the recipe's output.width.
+                            16 to 4000. Default: the recipe's output.width.
   --scale <0..5>            Multiplier of the canvas size; when set, width is ignored. Not for svg
                             or pdf. A number greater than 0 and at most 5. Default: the recipe's
                             output.scale.

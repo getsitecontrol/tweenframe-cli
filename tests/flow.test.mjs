@@ -11,7 +11,7 @@ const api = "/api/public/v1";
 const gif = Buffer.from("GIF89a");
 const detail = {
   id: "real-estate/banner-7", version: 1, title: "Banner", description: "d", tags: [], preview_url: "/p.webp",
-  asset_paths: [["photos", "*", "src"]],
+  asset_paths: [["photos", "*", "src"], ["logo", "src"]],
   input_schema: {
     type: "object", required: ["photos"],
     $defs: {
@@ -50,6 +50,11 @@ const detail = {
   docs: { guide: "/docs/agent/recipes.md" },
   examples: [{ name: "minimal", description: "One photo.", inputs: { photos: [{ src: "/template-catalog/assets/a.jpg" }] } }],
 };
+const textDetail = {
+  ...detail, id: "text/loop", asset_paths: [],
+  input_schema: { type: "object", properties: { text: { type: "string", description: "Text." } } },
+  examples: [{ name: "minimal", description: "One line.", inputs: { text: "Hello" } }],
+};
 const guides = [
   { name: "skill", title: "TweenFrame skill", description: "Setup and workflow.", url: "/docs/agent/SKILL.md" },
   { name: "errors", title: "Errors", description: "Every error code and what to do.", url: "/docs/agent/errors.md" },
@@ -74,6 +79,7 @@ function handle(request, body) {
   if (route === "/recipes") return [200, { recipes: [{ id: detail.id, version: 1 }] }];
   if (route === "/recipes/real-estate/banner-7" && [null, "1"].includes(url.searchParams.get("version")))
     return [200, detail];
+  if (route === "/recipes/text/loop") return [200, textDetail];
   if (route.startsWith("/recipes/"))
     return [404, { error: {
       code: "recipe_not_found", message: "Recipe is not in the public catalog.",
@@ -238,7 +244,7 @@ test("recipes show prints a readable summary, --example prints one example's inp
   assert.match(stdout, /^  \[Photos\]\n  photos\[\]/m);
   assert.ok(stdout.indexOf("  headline") < stdout.indexOf("  [Contacts]"), "ungrouped inputs come first");
   assert.match(stdout, /^Types .*\n  Media  Fields: src, focus\.$/m);
-  assert.match(stdout, /^Images: photos\[\]\.src\./m);
+  assert.match(stdout, /^Images: photos\[\]\.src, logo\.src\./m);
   assert.match(stdout, /^Output defaults: format gif, fps 20, width 900\./m);
   assert.match(stdout, /^  minimal +One photo\.$/m);
   assert.match(stdout, /^Docs: http:\/\/127\.0\.0\.1:\d+\/docs\/agent\/recipes\.md$/m);
@@ -246,6 +252,12 @@ test("recipes show prints a readable summary, --example prints one example's inp
   const example = await run(["recipes", "show", "real-estate/banner-7", "--example", "minimal"]);
   assert.equal(example.code, 0);
   assert.deepEqual(JSON.parse(example.stdout), detail.examples[0].inputs);
+  assert.equal(example.stderr, "Image input photos[].src holds catalog photos; "
+    + "replace them with file:///absolute/path to use your own.\n", "only image paths set in the example are named, on stderr");
+  const text = await run(["recipes", "show", "text/loop", "--example", "minimal"]);
+  assert.equal(text.code, 0);
+  assert.deepEqual(JSON.parse(text.stdout), { text: "Hello" });
+  assert.equal(text.stderr, "", "no note without images");
 
   const unknown = await fails(["recipes", "show", "real-estate/banner-7", "--example", "full"]);
   assert.equal(unknown.code, "invalid_value");
@@ -413,7 +425,7 @@ test("local errors name the allowed values and carry hint and docs", async () =>
   const errors = `${new URL(base).origin}/docs/agent/errors.md`;
   const render = ["recipes", "render", "real-estate/banner-7", "--input", "{}"];
   const cases = [
-    [[...render, "--width", "5"], "invalid_value", /--width must be an integer from 16 to 3000; got "5"/],
+    [[...render, "--width", "5"], "invalid_value", /--width must be an integer from 16 to 4000; got "5"/],
     [[...render, "--fps", "31"], "invalid_value", /--fps must be a number from 0 to 30/],
     [[...render, "--quality", "best"], "invalid_value", /--quality must be one of: maximum, normal, minimal/],
     [[...render, "--loop", "yes"], "invalid_value", /--loop must be true or false/],

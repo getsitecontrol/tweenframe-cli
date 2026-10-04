@@ -22,11 +22,14 @@ Options:
   --json                    Print the full response as {"data": ...}: input_schema, asset_paths,
                             output, examples.
   --example <name>          Print only that example's inputs as JSON, ready to save as the --input
-                            file of `recipes render`.
+                            file of `recipes render`. When the example has images, a line on stderr
+                            names their paths: they are catalog photos to replace with your own
+                            file:///absolute/path.
   -h, --help                Show this help.
 
-Output: Text on stdout; with --json, {"data": ...}; with --example, the example's inputs as JSON.
-        Errors as {"error": {code, message, hint, docs}} on stderr, exit code 1.
+Output: Text on stdout; with --json, {"data": ...}; with --example, the example's inputs as JSON
+        (plus a one-line note on stderr when it holds catalog images). Errors as {"error": {code,
+        message, hint, docs}} on stderr, exit code 1.
 
 Examples:
   tweenframe recipes show real-estate/banner-7

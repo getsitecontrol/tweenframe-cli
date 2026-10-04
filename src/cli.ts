@@ -13,7 +13,7 @@ import { CliError, type Json } from "./errors.js";
 import type { RecipeDetail } from "./generated/types.js";
 import { selector } from "./inputs.js";
 import { startRender, waitRender, type RenderOptions } from "./renders.js";
-import { exampleInputs, recipeSummary, type ShowOptions } from "./show.js";
+import { exampleImageHint, exampleInputs, recipeSummary, type ShowOptions } from "./show.js";
 
 const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
 const emit = (data: unknown): void => { process.stdout.write(JSON.stringify({ data }) + "\n"); };
@@ -100,7 +100,11 @@ for (const op of operations) {
     if (op.operationId !== "getRecipe" || options.json) return emit(result);
     const detail = result as RecipeDetail;
     const { example } = options as ShowOptions;
-    process.stdout.write(example === undefined ? recipeSummary(detail) : JSON.stringify(exampleInputs(detail, example), null, 2) + "\n");
+    if (example === undefined) return void process.stdout.write(recipeSummary(detail));
+    const inputs = exampleInputs(detail, example);
+    process.stdout.write(JSON.stringify(inputs, null, 2) + "\n");
+    const hint = exampleImageHint(detail, inputs);
+    if (hint) process.stderr.write(hint + "\n");
   });
 }
 register(groups.get("auth")!, "status", docOf("auth status")).action(async () => {

@@ -1,4 +1,4 @@
-// Generated from openapi/tweenframe.json (sha256 0b2326bd1640). Do not edit.
+// Generated from openapi/tweenframe.json (sha256 298601d4be38). Do not edit.
 export const meta = {
   "title": "TweenFrame Public API",
   "description": "Render TweenFrame catalog recipes (animated GIF, WebP, video) from the command line. Results print as one JSON document on stdout, errors as one on stderr with a hint and a docs link.",
@@ -291,7 +291,7 @@ export const outputOptions = {
   "width": {
     "type": "integer",
     "minimum": 16,
-    "maximum": 3000,
+    "maximum": 4000,
     "description": "Output width in pixels; height follows the canvas aspect. Rescales the rendered canvas, so one inputs object serves every size."
   },
   "scale": {
@@ -1007,7 +1007,7 @@ export const schemas = {
       "width": {
         "type": "integer",
         "minimum": 16,
-        "maximum": 3000,
+        "maximum": 4000,
         "description": "Output width in pixels; height follows the canvas aspect. Rescales the rendered canvas, so one inputs object serves every size."
       },
       "scale": {

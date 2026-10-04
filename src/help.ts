@@ -25,7 +25,8 @@ const showNote = "The CLI prints a readable summary: title and description, one 
   + "default, first sentence of its description; nested fields indented, list items as name[], grouped as in the "
   + "web tool), the shared types such as Media, the image paths, the output defaults and the example names. --json prints the full response for programs; --example <name> prints one "
   + "example's inputs.";
-const showOutput = "Text on stdout; with --json, {\"data\": ...}; with --example, the example's inputs as JSON. "
+const showOutput = "Text on stdout; with --json, {\"data\": ...}; with --example, the example's inputs as JSON "
+  + "(plus a one-line note on stderr when it holds catalog images). "
   + "Errors as {\"error\": {code, message, hint, docs}} on stderr, exit code 1.";
 
 function schemaOption(name: string, schema: Schema, defaultText: string): OptionDoc {
@@ -63,7 +64,9 @@ function operationDoc(op: Operation): CommandDoc {
     options.push({ flags: "--json", description: "Print the full response as {\"data\": ...}: input_schema, asset_paths, output, examples." });
     options.push({
       flags: "--example <name>",
-      description: "Print only that example's inputs as JSON, ready to save as the --input file of `recipes render`.",
+      description: "Print only that example's inputs as JSON, ready to save as the --input file of `recipes render`. "
+        + "When the example has images, a line on stderr names their paths: they are catalog photos to replace with "
+        + "your own file:///absolute/path.",
     });
   }
   if (op.mode === "analyze") {

@@ -46,6 +46,22 @@ function range(node: Node): string {
   return node.maximum === undefined ? "" : ` <=${node.maximum}`;
 }
 
+const pathLabel = (path: readonly string[]) => path.join(".").replace(/\.\*/g, "[]");
+
+function hasValue(value: unknown, path: readonly string[]): boolean {
+  if (!path.length) return value !== undefined && value !== null && value !== "";
+  if (path[0] === "*") return Array.isArray(value) && value.some((item) => hasValue(item, path.slice(1)));
+  return typeof value === "object" && value !== null && hasValue((value as Record<string, unknown>)[path[0]], path.slice(1));
+}
+
+// Example images point at catalog assets and are easy to mistake for final inputs; the note goes to stderr so stdout stays pure JSON.
+export function exampleImageHint(detail: RecipeDetail, inputs: Record<string, unknown>): string | undefined {
+  const filled = detail.asset_paths.filter((path) => hasValue(inputs, path)).map(pathLabel);
+  if (!filled.length) return undefined;
+  const subject = filled.length === 1 ? `Image input ${filled[0]} holds` : `Image inputs ${filled.join(", ")} hold`;
+  return `${subject} catalog photos; replace them with file:///absolute/path to use your own.`;
+}
+
 export function recipeSummary(detail: RecipeDetail): string {
   const root = detail.input_schema as Node;
   const resolve = (node: Node): Node =>
@@ -155,7 +171,7 @@ export function recipeSummary(detail: RecipeDetail): string {
   for (const row of rows.filter((item) => !item.heading)) row.text = firstSentence(row.description, room - row.suffix.length) + row.suffix;
   const line = (row: Row) => row.heading ? `  ${row.name}` : `  ${row.name.padEnd(widths[0])}  ${row.type.padEnd(widths[1])}  ${row.presence.padEnd(widths[2])}  ${row.text}`.trimEnd();
 
-  const images = detail.asset_paths.map((path) => path.join(".").replace(/\.\*/g, "[]"));
+  const images = detail.asset_paths.map(pathLabel);
   const defaults = Object.entries(detail.output ?? {}).map(([key, value]) => `${key} ${value}`).join(", ");
   const formats = (outputOptions.format.enum as readonly string[]).join(", ");
   const nameWidth = Math.max(0, ...detail.examples.map((example) => example.name.length));
